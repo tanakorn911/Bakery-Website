@@ -1,0 +1,387 @@
+{% extends "layout.html" %}
+
+{% block title %}จัดการระบบ - Sweet Dreams Bakery{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid admin-container">
+    <div class="admin-header">
+        <h1 class="mb-3">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            ระบบจัดการ Sweet Dreams Bakery
+        </h1>
+        <p class="lead mb-0">จัดการสินค้า คำสั่งซื้อ และข้อมูลร้านค้า </p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="admin-stats">
+        <div class="row gy-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-products">
+                    <div class="stat-icon">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <div class="stat-number">{{ products|length }}</div>
+                    <div class="stat-label">สินค้าทั้งหมด</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-orders">
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">คำสั่งซื้อวันนี้</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-users">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">0</div>
+                    <div class="stat-label">สมาชิกใหม่</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-revenue">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-number">฿0</div>
+                    <div class="stat-label">ยอดขายวันนี้</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Form (Initially Hidden) -->
+    <div class="add-product-form" id="add-product-form">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0">
+                <i class="fas fa-plus-circle text-primary me-2"></i>
+                เพิ่มสินค้าใหม่
+            </h4>
+            <button type="button" class="btn-close" id="close-add-form"></button>
+        </div>
+
+        <form id="product-form">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="product_name" class="form-label">ชื่อสินค้า *</label>
+                    <input type="text" class="form-control" id="product_name" name="name" required>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="product_name_en" class="form-label">ชื่อสินค้า (อังกฤษ)</label>
+                    <input type="text" class="form-control" id="product_name_en" name="name_en">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="product_price" class="form-label">ราคา (บาท) *</label>
+                    <input type="number" class="form-control" id="product_price" name="price" 
+                           required min="0" step="0.01">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="product_category" class="form-label">หมวดหมู่ *</label>
+                    <select class="form-select" id="product_category" name="category_id" required>
+                        <option value="">เลือกหมวดหมู่</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="product_description" class="form-label">รายละเอียดสินค้า</label>
+                <textarea class="form-control" id="product_description" name="description" 
+                          rows="3" placeholder="อธิบายเกี่ยวกับสินค้า..."></textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="product_stock" class="form-label">จำนวนสต็อก</label>
+                    <input type="number" class="form-control" id="product_stock" name="stock_quantity" 
+                           min="0" value="0">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="product_image" class="form-label">ชื่อไฟล์รูปภาพ</label>
+                    <input type="text" class="form-control" id="product_image" name="image" 
+                           placeholder="example.jpg">
+                    <div class="form-text">ใส่ชื่อไฟล์รูปที่อยู่ในโฟลเดอร์ static/images/products/</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="product_available" 
+                               name="is_available" checked>
+                        <label class="form-check-label" for="product_available">
+                            พร้อมจำหน่าย
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="product_featured" 
+                               name="is_featured">
+                        <label class="form-check-label" for="product_featured">
+                            สินค้าแนะนำ
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>บันทึกสินค้า
+                </button>
+                <button type="reset" class="btn btn-outline-secondary">
+                    <i class="fas fa-undo me-2"></i>รีเซ็ต
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Products Management -->
+    <div class="products-section">
+        <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-boxes text-primary me-2"></i>
+                    จัดการสินค้า
+                </h3>
+                <button class="btn btn-primary" id="show-add-form">
+                    <i class="fas fa-plus me-2"></i>เพิ่มสินค้าใหม่
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            {% if products %}
+            <table class="table table-hover products-table">
+                <thead>
+                    <tr>
+                        <th width="80">รูป</th>
+                        <th>ชื่อสินค้า</th>
+                        <th>หมวดหมู่</th>
+                        <th width="100">ราคา</th>
+                        <th width="100">สต็อก</th>
+                        <th width="120">สถานะ</th>
+                        <th width="150">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr data-product-id="{{ product.id }}">
+                        <td>
+                            {% if product.image %}
+                                <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
+                                     alt="{{ product.name }}" class="product-image-thumb">
+                            {% else %}
+                                <div class="product-image-thumb d-flex align-items-center justify-content-center bg-light">
+                                    <i class="fas fa-image text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-600">{{ product.name }}</div>
+                            {% if product.description %}
+                                <small class="text-muted">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ product.category_name }}</span>
+                        </td>
+                        <td class="fw-600 text-primary">{{ "%.0f"|format(product.price) }} ฿</td>
+                        <td>
+                            <span class="{% if product.stock_quantity <= 5 %}text-warning{% else %}text-success{% endif %}">
+                                {{ product.stock_quantity }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                {% if product.is_available %}
+                                    <span class="status-badge status-available">พร้อมจำหน่าย</span>
+                                {% else %}
+                                    <span class="status-badge status-unavailable">ไม่พร้อมจำหน่าย</span>
+                                {% endif %}
+                                
+                                {% if product.is_featured %}
+                                    <span class="status-badge featured-badge">แนะนำ</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-outline-primary btn-action btn-edit" 
+                                        data-product-id="{{ product.id }}"
+                                        data-bs-toggle="tooltip" title="แก้ไข">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                
+                                <button class="btn btn-outline-info btn-action btn-toggle-status" 
+                                        data-product-id="{{ product.id }}"
+                                        data-current-status="{{ product.is_available }}"
+                                        data-bs-toggle="tooltip" 
+                                        title="{% if product.is_available %}ปิดการจำหน่าย{% else %}เปิดการจำหน่าย{% endif %}">
+                                    {% if product.is_available %}
+                                        <i class="fas fa-eye-slash"></i>
+                                    {% else %}
+                                        <i class="fas fa-eye"></i>
+                                    {% endif %}
+                                </button>
+                                
+                                <button class="btn btn-outline-warning btn-action btn-toggle-featured" 
+                                        data-product-id="{{ product.id }}"
+                                        data-current-featured="{{ product.is_featured }}"
+                                        data-bs-toggle="tooltip" 
+                                        title="{% if product.is_featured %}ยกเลิกแนะนำ{% else %}ตั้งเป็นสินค้าแนะนำ{% endif %}">
+                                    {% if product.is_featured %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                </button>
+                                
+                                <button class="btn btn-outline-danger btn-action btn-delete" 
+                                        data-product-id="{{ product.id }}"
+                                        data-product-name="{{ product.name }}"
+                                        data-bs-toggle="tooltip" title="ลบ">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center p-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">ยังไม่มีสินค้า</h5>
+                <p class="text-muted">เริ่มต้นด้วยการเพิ่มสินค้าแรกของคุณ</p>
+                <button class="btn btn-primary" onclick="$('#show-add-form').click()">
+                    <i class="fas fa-plus me-2"></i>เพิ่มสินค้าใหม่
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        // Preview image before upload
+        $('#productImage').change(function () {
+            const input = this;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#imagePreview').attr('src', e.target.result).show();
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        });
+
+        // Toast function
+        function showToast(message, type = 'info') {
+            const toastId = 'toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" 
+                    role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                                data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>`;
+            $('#toastContainer').append(toastHtml);
+            const toastElement = new bootstrap.Toast(document.getElementById(toastId));
+            toastElement.show();
+            setTimeout(() => { $('#' + toastId).remove(); }, 3500);
+        }
+
+        // DataTable init
+        $('#productTable').DataTable({
+            responsive: true,
+            pageLength: 10,
+            ordering: true,
+            language: {
+                search: "ค้นหา:",
+                lengthMenu: "แสดง _MENU_ รายการ",
+                info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ รายการ",
+                paginate: { next: "ถัดไป", previous: "ก่อนหน้า" }
+            }
+        });
+
+        // Toggle Status
+        $('.btn-toggle-status').click(function () {
+            const productId = $(this).data('product-id');
+            const currentStatus = $(this).data('current-status');
+            const newStatus = !currentStatus;
+
+            const row = $(this).closest('tr');
+            const statusCell = row.find('td:nth-child(6)');
+
+            if (newStatus) {
+                statusCell.find('.status-badge').remove();
+                statusCell.prepend('<span class="status-badge active-badge">ใช้งาน</span>');
+                $(this).html('<i class="fas fa-toggle-on"></i>')
+                    .attr('title', 'ปิดการใช้งาน')
+                    .data('current-status', true);
+                showToast('เปิดใช้งานสินค้าแล้ว', 'success');
+            } else {
+                statusCell.find('.active-badge').remove();
+                statusCell.prepend('<span class="status-badge inactive-badge">ปิดใช้งาน</span>');
+                $(this).html('<i class="fas fa-toggle-off"></i>')
+                    .attr('title', 'เปิดการใช้งาน')
+                    .data('current-status', false);
+                showToast('ปิดการใช้งานสินค้าแล้ว', 'warning');
+            }
+
+            $(this).tooltip('dispose').tooltip();
+        });
+
+        // Toggle Featured
+        $('.btn-toggle-featured').click(function () {
+            const productId = $(this).data('product-id');
+            const currentFeatured = $(this).data('current-featured');
+            const newFeatured = !currentFeatured;
+
+            const row = $(this).closest('tr');
+            const statusCell = row.find('td:nth-child(6)');
+
+            if (newFeatured) {
+                if (!statusCell.find('.featured-badge').length) {
+                    statusCell.append('<span class="status-badge featured-badge">แนะนำ</span>');
+                }
+                $(this).html('<i class="fas fa-star"></i>')
+                    .attr('title', 'ยกเลิกแนะนำ')
+                    .data('current-featured', true);
+                showToast('ตั้งเป็นสินค้าแนะนำแล้ว', 'success');
+            } else {
+                statusCell.find('.featured-badge').remove();
+                $(this).html('<i class="far fa-star"></i>')
+                    .attr('title', 'ตั้งเป็นสินค้าแนะนำ')
+                    .data('current-featured', false);
+                showToast('ยกเลิกการแนะนำสินค้าแล้ว', 'info');
+            }
+
+            $(this).tooltip('dispose').tooltip();
+        });
+    });
+    </script>
+{% endblock %}

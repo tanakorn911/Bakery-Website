@@ -1,0 +1,643 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ product.name }} - Sweet Dreams Bakery{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <i class="fas fa-home me-1"></i>หน้าหลัก
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('category_by_id', category_id=product.category_id) }}" class="text-decoration-none">
+                    {{ product.category_name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-lg-6 mb-4">
+            <div class="product-image-container">
+                {% if product.image %}
+                    <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
+                         alt="{{ product.name }}" 
+                         class="img-fluid rounded shadow-lg main-product-image"
+                         id="main-image">
+                {% else %}
+                    <div class="no-image-placeholder">
+                        <i class="fas fa-birthday-cake fa-5x text-muted"></i>
+                        <p class="text-muted mt-3">ไม่มีรูปภาพ</p>
+                    </div>
+                {% endif %}
+                
+                <!-- Image Gallery (if multiple images) -->
+                <div class="image-gallery mt-3 d-none">
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
+                                 class="img-fluid rounded thumbnail" 
+                                 data-main="{{ url_for('static', filename='images/products/' + product.image) }}">
+                        </div>
+                        <!-- Add more thumbnails if needed -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="col-lg-6">
+            <div class="product-details">
+                <!-- Category Badge -->
+                <span class="badge bg-primary mb-3">
+                    <i class="fas fa-tag me-1"></i>{{ product.category_name }}
+                </span>
+                
+                {% if product.is_featured %}
+                <span class="badge bg-warning text-dark mb-3 ms-2">
+                    <i class="fas fa-star me-1"></i>สินค้าแนะนำ
+                </span>
+                {% endif %}
+
+                <!-- Product Name -->
+                <h1 class="product-title mb-3">{{ product.name }}</h1>
+                
+                {% if product.name_en %}
+                <p class="text-muted mb-3"><em>{{ product.name_en }}</em></p>
+                {% endif %}
+
+                <!-- Price -->
+                <div class="price-section mb-4">
+                    <span class="current-price">{{ "%.0f"|format(product.price) }} บาท</span>
+                    <!-- Add discount price if needed -->
+                </div>
+
+                <!-- Description -->
+                {% if product.description %}
+                <div class="description-section mb-4">
+                    <h5>รายละเอียดสินค้า</h5>
+                    <p class="product-description">{{ product.description }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Stock Status -->
+                <div class="stock-section mb-4">
+                    <h6>สถานะสินค้า:</h6>
+                    {% if product.stock_quantity > 0 %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>พร้อมจำหน่าย
+                        </span>
+                        <span class="text-muted ms-2">คงเหลือ {{ product.stock_quantity }} ชิ้น</span>
+                        
+                        {% if product.stock_quantity <= 5 %}
+                        <br>
+                        <small class="text-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            สินค้าเหลือน้อย กรุณาสั่งซื้อเร็ว!
+                        </small>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times-circle me-1"></i>สินค้าหมด
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Product Options (if any) -->
+                <div class="options-section mb-4" id="product-options">
+                    {% if product.category_name == 'เครื่องดื่ม' %}
+                    <h6>เลือกประเภท:</h6>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="product-option" id="option-hot" value="ร้อน" checked>
+                        <label class="btn btn-outline-primary" for="option-hot">ร้อน</label>
+                        
+                        <input type="radio" class="btn-check" name="product-option" id="option-cold" value="เย็น">
+                        <label class="btn btn-outline-primary" for="option-cold">เย็น</label>
+                        
+                        <input type="radio" class="btn-check" name="product-option" id="option-frappe" value="ปั่น">
+                        <label class="btn btn-outline-primary" for="option-frappe">ปั่น</label>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quantity Selection -->
+                {% if product.stock_quantity > 0 %}
+                <div class="quantity-section mb-4">
+                    <h6>จำนวน:</h6>
+                    <div class="input-group" style="max-width: 150px;">
+                        <button class="btn btn-outline-secondary" type="button" id="qty-decrease">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" class="form-control text-center" id="quantity" 
+                               value="1" min="1" max="{{ product.stock_quantity }}">
+                        <button class="btn btn-outline-secondary" type="button" id="qty-increase">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add to Cart Button -->
+                <div class="action-buttons mb-4">
+                    <button class="btn btn-primary btn-lg me-3 add-to-cart-detail"
+                            data-product-id="{{ product.id }}"
+                            data-product-name="{{ product.name }}"
+                            data-product-price="{{ product.price }}">
+                        <i class="fas fa-cart-plus me-2"></i>
+                        เพิ่มลงตะกร้า
+                    </button>
+                    
+                    <button class="btn btn-outline-danger btn-lg" id="add-to-wishlist">
+                        <i class="fas fa-heart me-2"></i>
+                        ใส่วิชลิสต์
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- Product Info -->
+                <div class="product-info">
+                    <div class="info-item">
+                        <strong>หมวดหมู่:</strong>
+                        <a href="{{ url_for('category_by_id', category_id=product.category_id) }}" class="text-decoration-none">{{ product.category_name }}</a>
+                    </div>
+                    
+                    <div class="info-item">
+                        <strong>รหัสสินค้า:</strong> #{{ product.id }}
+                    </div>
+                    
+                    {% if product.created_at %}
+                    <div class="info-item">
+                        <strong>วันที่เพิ่มสินค้า:</strong> 
+                        {{ moment(product.created_at).format('DD/MM/YYYY') if moment else 'N/A' }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Share Buttons -->
+                <div class="share-section mt-4">
+                    <h6>แชร์สินค้านี้:</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm share-btn" data-platform="facebook">
+                            <i class="fab fa-facebook-f me-1"></i>Facebook
+                        </button>
+                        <button class="btn btn-outline-success btn-sm share-btn" data-platform="line">
+                            <i class="fab fa-line me-1"></i>Line
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" id="copy-link">
+                            <i class="fas fa-link me-1"></i>คัดลอกลิงก์
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Tabs -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="productTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" id="description-tab" data-bs-toggle="tab" 
+                            data-bs-target="#description" type="button">
+                        <i class="fas fa-info-circle me-1"></i>รายละเอียด
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="ingredients-tab" data-bs-toggle="tab" 
+                            data-bs-target="#ingredients" type="button">
+                        <i class="fas fa-list-ul me-1"></i>ส่วนประกอบ
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" 
+                            data-bs-target="#reviews" type="button">
+                        <i class="fas fa-star me-1"></i>รีวิว (0)
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content p-4 bg-light rounded-bottom">
+                <div class="tab-pane fade show active" id="description">
+                    {% if product.description %}
+                        <p>{{ product.description }}</p>
+                    {% else %}
+                        <p class="text-muted">ไม่มีรายละเอียดเพิ่มเติม</p>
+                    {% endif %}
+                    
+                    <!-- Additional product details -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6>ข้อมูลสินค้า</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>ราคา:</strong> {{ "%.0f"|format(product.price) }} บาท</li>
+                                <li><strong>หมวดหมู่:</strong> {{ product.category_name }}</li>
+                                <li><strong>สถานะ:</strong> 
+                                    {% if product.stock_quantity > 0 %}
+                                        <span class="text-success">พร้อมจำหน่าย</span>
+                                    {% else %}
+                                        <span class="text-danger">หมดชั่วคราว</span>
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>การเก็บรักษา</h6>
+                            <ul class="list-unstyled">
+                                <li>• เก็บในตู้เย็น 2-8°C</li>
+                                <li>• ควรรับประทานภายใน 3 วัน</li>
+                                <li>• ห้ามแช่แข็ง</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="ingredients">
+                    <h6>ส่วนประกอบหลัก</h6>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- This would come from database in real implementation -->
+                            <ul>
+                                <li>แป้งสาลีคุณภาพสูง</li>
+                                <li>เนยสดจากนิวซีแลนด์</li>
+                                <li>ไข่ไก่สด</li>
+                                <li>น้ำตาลทรายขาว</li>
+                                <li>นมสดพาสเจอร์ไรส์</li>
+                                <li>วานิลลาแท้</li>
+                            </ul>
+                            
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>คำเตือนสำหรับผู้แพ้:</strong> 
+                                สินค้านี้มีส่วนประกอบของแป้งสาลี ไข่ และนม
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>ข้อมูลโภชนาการ (ต่อ 100 กรัม)</h6>
+                            <table class="table table-sm">
+                                <tr><td>แคลอรี่</td><td>350 kcal</td></tr>
+                                <tr><td>คาร์โบไฮเดรต</td><td>45 g</td></tr>
+                                <tr><td>ไขมัน</td><td>18 g</td></tr>
+                                <tr><td>โปรตีน</td><td>6 g</td></tr>
+                                <tr><td>โซเดียม</td><td>250 mg</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="reviews">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <h5>ยังไม่มีรีวิว</h5>
+                        <p>เป็นคนแรกที่รีวิวสินค้านี้!</p>
+                        <button class="btn btn-primary">เขียนรีวิว</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">สินค้าที่เกี่ยวข้อง</h3>
+            <div class="row">
+                <!-- This would show products from same category -->
+                <div class="col-12">
+                    <p class="text-muted">กำลังโหลดสินค้าที่เกี่ยวข้อง...</p>
+                    <a href="{{ url_for('category_by_id', category_id=product.category_id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        ดูสินค้าใน {{ product.category_name }} ทั้งหมด
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Options Modal (for complex options) -->
+<div class="modal fade" id="optionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">เลือกตัวเลือกสินค้า</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">ประเภท:</label>
+                    <select class="form-select" id="modal-product-option">
+                        <option value="ร้อน">ร้อน</option>
+                        <option value="เย็น">เย็น</option>
+                        <option value="ปั่น">ปั่น</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-primary" id="modal-confirm-add">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.product-image-container {
+    position: relative;
+}
+
+.main-product-image {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+}
+
+.no-image-placeholder {
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px dashed #dee2e6;
+}
+
+.thumbnail {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.thumbnail:hover {
+    transform: scale(1.05);
+}
+
+.product-title {
+    color: var(--primary-color);
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.current-price {
+    font-size: 2rem;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.product-description {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #666;
+}
+
+.info-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.share-btn:hover {
+    transform: translateY(-2px);
+}
+
+.tab-content {
+    min-height: 300px;
+}
+
+@media (max-width: 768px) {
+    .product-title {
+        font-size: 2rem;
+    }
+    
+    .current-price {
+        font-size: 1.5rem;
+    }
+    
+    .main-product-image {
+        height: 300px;
+    }
+    
+    .action-buttons {
+        text-align: center;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Quantity controls
+    $('#qty-increase').click(function() {
+        const qty = $('#quantity');
+        const max = parseInt(qty.attr('max'));
+        const current = parseInt(qty.val());
+        
+        if (current < max) {
+            qty.val(current + 1);
+        }
+    });
+    
+    $('#qty-decrease').click(function() {
+        const qty = $('#quantity');
+        const min = parseInt(qty.attr('min'));
+        const current = parseInt(qty.val());
+        
+        if (current > min) {
+            qty.val(current - 1);
+        }
+    });
+    
+    // Add to cart functionality
+    $('.add-to-cart-detail').click(function() {
+        const productId = $(this).data('product-id');
+        const productName = $(this).data('product-name');
+        const productPrice = $(this).data('product-price');
+        const quantity = parseInt($('#quantity').val());
+        
+        // Get selected options
+        let options = '';
+        const selectedOption = $('input[name="product-option"]:checked');
+        if (selectedOption.length) {
+            options = selectedOption.val();
+        }
+        
+        // Prepare data
+        const data = {
+            product_id: productId,
+            quantity: quantity,
+            options: options
+        };
+        
+        // Show loading
+        const button = $(this);
+        const originalText = button.html();
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>กำลังเพิ่ม...');
+        
+        // Send AJAX request
+        $.ajax({
+            url: '/add_to_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    // Update cart badge
+                    const cartBadge = $('#cart-badge');
+                    if (response.total_items > 0) {
+                        cartBadge.text(response.total_items).show();
+                    }
+                    
+                    // Show success toast
+                    showToast(response.message, 'success');
+                    
+                    // Animate cart icon
+                    $('.cart-link i').addClass('fa-bounce');
+                    setTimeout(() => {
+                        $('.cart-link i').removeClass('fa-bounce');
+                    }, 1000);
+                    
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'error');
+            },
+            complete: function() {
+                // Restore button
+                button.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+    
+    // Image gallery functionality
+    $('.thumbnail').click(function() {
+        const newSrc = $(this).data('main');
+        $('#main-image').attr('src', newSrc);
+        
+        $('.thumbnail').removeClass('border-primary');
+        $(this).addClass('border-primary');
+    });
+    
+    // Share functionality
+    $('.share-btn').click(function() {
+        const platform = $(this).data('platform');
+        const url = encodeURIComponent(window.location.href);
+        const title = encodeURIComponent('{{ product.name }} - Sweet Dreams Bakery');
+        
+        let shareUrl = '';
+        
+        switch(platform) {
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                break;
+            case 'line':
+                shareUrl = `https://social-plugins.line.me/lineit/share?url=${url}&text=${title}`;
+                break;
+        }
+        
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'width=600,height=400');
+        }
+    });
+    
+    // Copy link functionality
+    $('#copy-link').click(function() {
+        const url = window.location.href;
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('คัดลอกลิงก์แล้ว!', 'success');
+            });
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = url;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('คัดลอกลิงก์แล้ว!', 'success');
+            } catch (err) {
+                showToast('ไม่สามารถคัดลอกได้', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+    });
+    
+    // Wishlist functionality (placeholder)
+    $('#add-to-wishlist').click(function() {
+        showToast('ฟีเจอร์วิชลิสต์ยังไม่พร้อม', 'info');
+    });
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        // Create toast if not exists
+        if (!$('#toast').length) {
+            $('body').append(`
+                <div class="toast-container position-fixed bottom-0 end-0 p-3">
+                    <div id="toast" class="toast align-items-center border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body"></div>
+                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        
+        const toast = $('#toast');
+        const toastBody = toast.find('.toast-body');
+        
+        // Set message and type
+        toastBody.text(message);
+        
+        // Remove existing type classes
+        toast.removeClass('bg-success bg-danger bg-warning bg-info text-white text-dark');
+        
+        // Add appropriate class
+        switch(type) {
+            case 'success':
+                toast.addClass('bg-success text-white');
+                break;
+            case 'error':
+                toast.addClass('bg-danger text-white');
+                break;
+            case 'warning':
+                toast.addClass('bg-warning text-dark');
+                break;
+            default:
+                toast.addClass('bg-info text-white');
+        }
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast[0], {
+            autohide: true,
+            delay: 4000
+        });
+        
+        bsToast.show();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,544 @@
+{% extends "layout.html" %}
+
+{% block title %}ตะกร้าสินค้า - Sweet Dreams Bakery{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-container {
+        padding-top: 2rem;
+        min-height: calc(100vh - 300px);
+    }
+    
+    .cart-header {
+        background: var(--gradient-light);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .cart-item {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+        border-left: 4px solid var(--secondary-color);
+    }
+    
+    .cart-item:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .item-image {
+        width: 100px;
+        height: 100px;
+        border-radius: var(--border-radius-sm);
+        object-fit: cover;
+        border: 2px solid #f8f9fa;
+    }
+    
+    .item-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .item-name {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-options {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .quantity-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 1rem 0;
+    }
+    
+    .quantity-display {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: var(--border-radius-sm);
+        width: 60px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 1.1rem;
+        padding: 8px;
+    }
+    
+    .item-total {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+    
+    .empty-cart {
+        text-align: center;
+        padding: 5rem 2rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .empty-cart-icon {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 2rem;
+    }
+    
+    .checkout-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow-sm);
+        position: sticky;
+        top: 100px;
+    }
+    
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .summary-row:last-child {
+        border-bottom: none;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 2px solid var(--secondary-color);
+    }
+    
+    .checkout-btn {
+        background: var(--gradient-primary);
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: var(--border-radius-lg);
+        width: 100%;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .checkout-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container cart-container">
+    <div class="cart-header">
+        <h1 class="display-6 mb-3">
+            <i class="fas fa-shopping-cart text-primary me-3"></i>
+            ตะกร้าสินค้าของคุณ
+        </h1>
+        <p class="lead text-muted mb-0">ตรวจสอบสินค้าก่อนทำการสั่งซื้อ</p>
+    </div>
+
+    {% if cart_items %}
+        <div class="row">
+            <!-- Cart Items -->
+            <div class="col-lg-8">
+                <div class="cart-items-section">
+                    {% for cart_key, item in cart_items.items() %}
+                    <div class="cart-item" data-cart-key="{{ cart_key }}" data-price="{{ item.price }}">
+                        <div class="row align-items-center">
+                            <!-- Product Image -->
+                            <div class="col-md-3 col-sm-4 mb-3 mb-md-0">
+                                {% if item.image %}
+                                    <img src="{{ url_for('static', filename='images/products/' + item.image) }}" 
+                                         alt="{{ item.name }}" 
+                                         class="item-image w-100">
+                                {% else %}
+                                    <div class="item-image w-100 d-flex align-items-center justify-content-center bg-light">
+                                        <i class="fas fa-image fa-2x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Product Info -->
+                            <div class="col-md-6 col-sm-8 mb-3 mb-md-0">
+                                <div class="item-info">
+                                    <h5 class="item-name">{{ item.name }}</h5>
+                                    
+                                    {% if item.options %}
+                                        <div class="item-options">
+                                            <i class="fas fa-cog me-1"></i>{{ item.options }}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="item-price">{{ "%.0f"|format(item.price) }} บาท/ชิ้น</div>
+                                    
+                                    <!-- Quantity Controls -->
+                                    <div class="quantity-section">
+                                        <button class="quantity-btn quantity-btn-decrease" 
+                                                data-action="decrease" 
+                                                data-cart-key="{{ cart_key }}"
+                                                data-product-name="{{ item.name }}">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        
+                                        <input type="number" 
+                                               class="quantity-display" 
+                                               id="quantity-{{ cart_key }}" 
+                                               value="{{ item.quantity }}" 
+                                               min="1" 
+                                               max="99"
+                                               data-cart-key="{{ cart_key }}"
+                                               readonly>
+                                        
+                                        <button class="quantity-btn quantity-btn-increase" 
+                                                data-action="increase" 
+                                                data-cart-key="{{ cart_key }}"
+                                                data-product-name="{{ item.name }}">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item Total & Remove -->
+                            <div class="col-md-3 text-md-end">
+                                <div class="item-total mb-2" id="total-{{ cart_key }}">
+                                    {{ "%.0f"|format(item.price * item.quantity) }} บาท
+                                </div>
+                                
+                                <button class="btn btn-outline-danger btn-sm remove-from-cart" 
+                                        data-cart-key="{{ cart_key }}"
+                                        data-product-name="{{ item.name }}"
+                                        data-bs-toggle="tooltip" 
+                                        title="ลบสินค้า">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <span class="d-none d-sm-inline ms-1">ลบ</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Continue Shopping -->
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}#products" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        เลือกซื้อสินค้าต่อ
+                    </a>
+                </div>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="col-lg-4">
+                <div class="checkout-section">
+                    <h4 class="mb-4">
+                        <i class="fas fa-receipt text-primary me-2"></i>
+                        สรุปการสั่งซื้อ
+                    </h4>
+
+                    <div class="summary-row">
+                        <span>จำนวนรายการ:</span>
+                        <span id="total-items" class="fw-600">{{ total_items }} ชิ้น</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>ราคาสินค้า:</span>
+                        <span id="subtotal-price">{{ "%.0f"|format(total_price) }} บาท</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>ค่าจัดส่ง:</span>
+                        <span class="text-success">ฟรี</span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span class="fs-5">รวมทั้งหมด:</span>
+                        <span id="total-price" class="fs-4">{{ "%.0f"|format(total_price) }} บาท</span>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Checkout Button -->
+                    <a href="{{ url_for('checkout') }}" class="checkout-btn btn">
+                        <i class="fas fa-credit-card me-2"></i>
+                        ดำเนินการสั่งซื้อ
+                    </a>
+
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt text-success me-1"></i>
+                            การสั่งซื้อของคุณปลอดภัยด้วย SSL
+                        </small>
+                    </div>
+
+                    <!-- Promotion Info -->
+                    <div class="mt-4 p-3 bg-light rounded">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-gift me-2"></i>โปรโมชั่น
+                        </h6>
+                        <ul class="list-unstyled mb-0 small">
+                            <li class="mb-1">
+                                <i class="fas fa-check text-success me-2"></i>
+                                ฟรีค่าจัดส่งสำหรับคำสั่งซื้อทุกยอด
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-check text-success me-2"></i>
+                                รับคะแนนสะสม 1 แต้ม ต่อการซื้อ 100 บาท
+                            </li>
+                            <li>
+                                <i class="fas fa-check text-success me-2"></i>
+                                การันตีความสดใหม่ 100%
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Empty Cart -->
+        <div class="empty-cart">
+            <div class="empty-cart-icon">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h3 class="mb-3">ตะกร้าสินค้าของคุณว่างเปล่า</h3>
+            <p class="text-muted mb-4">
+                คุณยังไม่ได้เพิ่มสินค้าใดลงในตะกร้า<br>
+                มาเลือกสินค้าอร่อย ๆ ของเรากันเถอะ!
+            </p>
+            
+            <a href="{{ url_for('index') }}#products" class="btn btn-primary btn-lg">
+                <i class="fas fa-shopping-bag me-2"></i>
+                เริ่มเลือกซื้อสินค้า
+            </a>
+
+            <!-- Popular Products Suggestion -->
+            {% if featured_products %}
+            <div class="mt-5">
+                <h5 class="mb-4">สินค้ายอดนิยม</h5>
+                <div class="row justify-content-center">
+                    {% for product in featured_products[:3] %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center p-3">
+                                <h6 class="card-title">{{ product.name }}</h6>
+                                <p class="text-primary fw-600">{{ "%.0f"|format(product.price) }} บาท</p>
+                                <a href="{{ url_for('index') }}#products" class="btn btn-outline-primary btn-sm">
+                                    ดูสินค้า
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle quantity button clicks
+    $('.quantity-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        const button = $(this);
+        const action = button.data('action');
+        const cartKey = button.data('cart-key');
+        const quantityInput = $(`#quantity-${cartKey}`);
+        const currentQuantity = parseInt(quantityInput.val());
+        
+        let newQuantity = currentQuantity;
+        if (action === 'increase') {
+            newQuantity = Math.min(99, currentQuantity + 1);
+        } else if (action === 'decrease') {
+            newQuantity = Math.max(1, currentQuantity - 1);
+        }
+        
+        if (newQuantity !== currentQuantity) {
+            updateCartQuantity(cartKey, newQuantity);
+        }
+    });
+    
+    // Handle direct quantity input change
+    $('.quantity-display').on('change', function() {
+        const input = $(this);
+        const cartKey = input.data('cart-key');
+        const newQuantity = Math.max(1, Math.min(99, parseInt(input.val()) || 1));
+        
+        input.val(newQuantity);
+        updateCartQuantity(cartKey, newQuantity);
+    });
+    
+    // Handle remove from cart
+    $('.remove-from-cart').on('click', function(e) {
+        e.preventDefault();
+        
+        const button = $(this);
+        const cartKey = button.data('cart-key');
+        const productName = button.data('product-name');
+        
+        // Show confirmation
+        if (confirm(`คุณต้องการลบ "${productName}" ออกจากตะกร้าหรือไม่?`)) {
+            removeFromCart(cartKey, productName);
+        }
+    });
+    
+    // Update cart quantity function
+    function updateCartQuantity(cartKey, quantity) {
+        const data = {
+            cart_key: cartKey,
+            quantity: quantity
+        };
+        
+        $.ajax({
+            url: '/update_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            beforeSend: function() {
+                $(`[data-cart-key="${cartKey}"]`).addClass('opacity-75');
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update quantity display
+                    $(`#quantity-${cartKey}`).val(quantity);
+                    
+                    // Update item total
+                    const itemPrice = parseFloat($(`[data-cart-key="${cartKey}"]`).data('price'));
+                    const itemTotal = itemPrice * quantity;
+                    $(`#total-${cartKey}`).text(formatPrice(itemTotal));
+                    
+                    // Update cart totals
+                    updateCartTotals(response.total_items, response.total_price);
+                    
+                    // Show success toast
+                    showToast('อัปเดตจำนวนสินค้าแล้ว', 'success');
+                } else {
+                    showToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+                }
+            },
+            error: function() {
+                showToast('เกิดข้อผิดพลาดในการอัปเดต', 'error');
+            },
+            complete: function() {
+                $(`[data-cart-key="${cartKey}"]`).removeClass('opacity-75');
+            }
+        });
+    }
+    
+    // Remove from cart function
+    function removeFromCart(cartKey, productName) {
+        const data = {
+            cart_key: cartKey
+        };
+        
+        $.ajax({
+            url: '/remove_from_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    // Remove item with animation
+                    const cartItem = $(`[data-cart-key="${cartKey}"]`);
+                    cartItem.fadeOut(300, function() {
+                        cartItem.remove();
+                        
+                        // If cart is empty, reload page
+                        if (response.total_items === 0) {
+                            setTimeout(() => location.reload(), 1000);
+                        }
+                    });
+                    
+                    // Update cart totals
+                    updateCartTotals(response.total_items, response.total_price);
+                    
+                    // Show success toast
+                    showToast(`ลบ "${productName}" ออกจากตะกร้าแล้ว`, 'success');
+                } else {
+                    showToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+                }
+            },
+            error: function() {
+                showToast('เกิดข้อผิดพลาดในการลบสินค้า', 'error');
+            }
+        });
+    }
+    
+    // Update cart totals
+    function updateCartTotals(totalItems, totalPrice) {
+        $('#total-items').text(`${totalItems} ชิ้น`);
+        $('#subtotal-price').text(formatPrice(totalPrice));
+        $('#total-price').text(formatPrice(totalPrice));
+        
+        // Update cart badge in navbar
+        const cartBadge = $('#cart-badge');
+        if (totalItems > 0) {
+            cartBadge.text(totalItems).show();
+        } else {
+            cartBadge.hide();
+        }
+    }
+    
+    // Format price helper
+    function formatPrice(price) {
+        return new Intl.NumberFormat('th-TH', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(price) + ' บาท';
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = $('#toast');
+        const toastBody = toast.find('.toast-body');
+        
+        // Set message and type
+        toastBody.text(message);
+        
+        // Remove existing type classes
+        toast.removeClass('toast-success toast-error toast-warning toast-info');
+        
+        // Add appropriate class
+        toast.addClass(`toast-${type}`);
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast[0], {
+            autohide: true,
+            delay: 3000
+        });
+        
+        bsToast.show();
+    }
+    
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}

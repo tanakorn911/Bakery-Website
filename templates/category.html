@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ category_name }} - Sweet Dreams Bakery{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Category Header -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="bg-gradient-light rounded p-4 text-center">
+                <h1 class="display-5 mb-3">{{ category_name }}</h1>
+                <p class="lead text-muted mb-0">เลือกสินค้าคุณภาพจากหมวดหมู่ {{ category_name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <i class="fas fa-home me-1"></i>หน้าหลัก
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ category_name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" class="form-control" id="search-products" 
+                       placeholder="ค้นหาสินค้าในหมวดหมู่นี้...">
+            </div>
+        </div>
+        <div class="col-lg-6 mt-3 mt-lg-0">
+            <div class="d-flex gap-2 justify-content-lg-end">
+                <select class="form-select" id="sort-products" style="max-width: 200px;">
+                    <option value="default">เรียงตาม</option>
+                    <option value="name-asc">ชื่อ A-Z</option>
+                    <option value="name-desc">ชื่อ Z-A</option>
+                    <option value="price-asc">ราคา น้อย-มาก</option>
+                    <option value="price-desc">ราคา มาก-น้อย</option>
+                </select>
+                <button class="btn btn-outline-primary" id="view-grid" title="มุมมองตาราง">
+                    <i class="fas fa-th-large"></i>
+                </button>
+                <button class="btn btn-outline-primary" id="view-list" title="มุมมองรายการ">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products -->
+    {% if products %}
+        <div class="row" id="products-container">
+            {% for product in products %}
+            <div class="col-lg-4 col-md-6 mb-4 product-item" 
+                 data-name="{{ product.name }}" 
+                 data-price="{{ product.price }}">
+                <div class="product-card h-100">
+                    <div class="product-image">
+                        {% if product.image %}
+                            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
+                                 alt="{{ product.name }}" 
+                                 class="img-fluid"
+                                 loading="lazy">
+                        {% else %}
+                            <i class="fas fa-birthday-cake"></i>
+                        {% endif %}
+                        
+                        <div class="product-overlay">
+                            <a href="{{ url_for('category_by_id', category_id=product.category_id) }}"
+                               class="btn btn-light btn-sm quick-view">
+                                <i class="fas fa-eye me-1"></i>ดูรายละเอียด
+                            </a>
+                        </div>
+                        
+                        {% if product.is_featured %}
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning">
+                                <i class="fas fa-star me-1"></i>แนะนำ
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if product.stock_quantity <= 5 and product.stock_quantity > 0 %}
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-warning text-dark">
+                                เหลือน้อย
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="product-body">
+                        <div class="product-category">{{ category_name }}</div>
+                        <h5 class="product-name">{{ product.name }}</h5>
+                        
+                        {% if product.description %}
+                            <p class="product-description">{{ product.description }}</p>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="product-price">{{ "%.0f"|format(product.price) }} บาท</div>
+                            
+                            {% if product.stock_quantity > 0 %}
+                                <small class="text-muted">คงเหลือ {{ product.stock_quantity }} ชิ้น</small>
+                            {% else %}
+                                <small class="text-danger">สินค้าหมด</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {% if product.stock_quantity > 0 %}
+                                <button class="btn btn-custom add-to-cart"
+                                        data-product-id="{{ product.id }}"
+                                        data-product-name="{{ product.name }}"
+                                        data-product-price="{{ product.price }}">
+                                    <i class="fas fa-cart-plus me-2"></i>
+                                    เพิ่มลงตะกร้า
+                                </button>
+                            {% else %}
+                                <button class="btn btn-secondary" disabled>
+                                    <i class="fas fa-times me-2"></i>
+                                    สินค้าหมด
+                                </button>
+                            {% endif %}
+                            
+                            <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-info-circle me-2"></i>
+                                ดูรายละเอียด
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination (if needed) -->
+        <div class="row mt-5">
+            <div class="col-12 text-center">
+                <p class="text-muted">แสดงสินค้าทั้งหมด {{ products|length }} รายการ</p>
+            </div>
+        </div>
+        
+    {% else %}
+        <!-- No Products -->
+        <div class="text-center py-5">
+            <i class="fas fa-box-open fa-5x text-muted mb-4"></i>
+            <h3 class="text-muted">ยังไม่มีสินค้าในหมวดหมู่นี้</h3>
+            <p class="text-muted mb-4">กรุณารอสักครู่ เรากำลังเพิ่มสินค้าใหม่ ๆ</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-2"></i>กลับหน้าหลัก
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Related Categories -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <hr class="my-4">
+            <h4 class="mb-3">หมวดหมู่อื่น ๆ</h4>
+            <div class="d-flex flex-wrap gap-2">
+                {% for category in categories %}
+                    {% if category.name != category_name %}
+                    <a href="{{ url_for('category_by_id', category_id=category.id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="{{ category.icon }} me-1"></i>
+                        {{ category.name }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                <a href="{{ url_for('index') }}#products" class="btn btn-outline-secondary">
+                    <i class="fas fa-th-large me-1"></i>
+                    ดูทั้งหมด
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Search functionality
+    $('#search-products').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        
+        $('.product-item').each(function() {
+            const productName = $(this).data('name').toLowerCase();
+            const productDescription = $(this).find('.product-description').text().toLowerCase();
+            
+            if (productName.includes(searchTerm) || productDescription.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        
+        updateResultsCount();
+    });
+    
+    // Sort functionality
+    $('#sort-products').on('change', function() {
+        const sortBy = $(this).val();
+        const container = $('#products-container');
+        const items = container.children('.product-item').get();
+        
+        items.sort(function(a, b) {
+            switch(sortBy) {
+                case 'name-asc':
+                    return $(a).data('name').localeCompare($(b).data('name'));
+                case 'name-desc':
+                    return $(b).data('name').localeCompare($(a).data('name'));
+                case 'price-asc':
+                    return $(a).data('price') - $(b).data('price');
+                case 'price-desc':
+                    return $(b).data('price') - $(a).data('price');
+                default:
+                    return 0;
+            }
+        });
+        
+        container.empty().append(items);
+    });
+    
+    // View toggle
+    $('#view-grid').on('click', function() {
+        $('#products-container .product-item').removeClass('col-12').addClass('col-lg-4 col-md-6');
+        $(this).addClass('active');
+        $('#view-list').removeClass('active');
+    });
+    
+    $('#view-list').on('click', function() {
+        $('#products-container .product-item').removeClass('col-lg-4 col-md-6').addClass('col-12');
+        $(this).addClass('active');
+        $('#view-grid').removeClass('active');
+    });
+    
+    // Update results count
+    function updateResultsCount() {
+        const visibleCount = $('.product-item:visible').length;
+        const totalCount = $('.product-item').length;
+        
+        if ($('#results-count').length === 0) {
+            $('.container').append('<div id="results-count" class="text-center mt-3"></div>');
+        }
+        
+        $('#results-count').html(`
+            <p class="text-muted">
+                แสดง ${visibleCount} จาก ${totalCount} รายการ
+                ${visibleCount !== totalCount ? '(กรองแล้ว)' : ''}
+            </p>
+        `);
+    }
+    
+    // Initialize
+    $('#view-grid').addClass('active');
+    updateResultsCount();
+});
+</script>
+{% endblock %}

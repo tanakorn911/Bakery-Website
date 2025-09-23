@@ -1,0 +1,285 @@
+{% extends "layout.html" %}
+
+{% block title %}สมัครสมาชิก - Sweet Dreams Bakery{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="form-custom">
+                <!-- Logo -->
+                <div class="text-center mb-4">
+                    <div class="logo-circle mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        <i class="fas fa-birthday-cake"></i>
+                    </div>
+                    <h2 class="mb-2">สมัครสมาชิก</h2>
+                    <p class="text-muted">สร้างบัญชีใหม่เพื่อสั่งซื้อสินค้าจากเรา</p>
+                </div>
+
+                <!-- Register Form -->
+                <form method="POST" id="register-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="full_name" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>ชื่อ-นามสกุล *
+                            </label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" 
+                                   required placeholder="กรอกชื่อ-นามสกุล">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user me-2"></i>ชื่อผู้ใช้ *
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   required placeholder="กรอกชื่อผู้ใช้">
+                            <div class="form-text">ใช้สำหรับเข้าสู่ระบบ (ภาษาอังกฤษและตัวเลขเท่านั้น)</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>อีเมล *
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   required placeholder="example@gmail.com">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">
+                                <i class="fas fa-phone me-2"></i>เบอร์โทรศัพท์
+                            </label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   placeholder="08x-xxx-xxxx">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock me-2"></i>รหัสผ่าน *
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       required placeholder="กรอกรหัสผ่าน" minlength="6">
+                                <button class="btn btn-outline-secondary" type="button" id="toggle-password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="confirm_password" class="form-label">
+                                <i class="fas fa-lock me-2"></i>ยืนยันรหัสผ่าน *
+                            </label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                   required placeholder="ยืนยันรหัสผ่าน" minlength="6">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="accept_terms" required>
+                            <label class="form-check-label" for="accept_terms">
+                                ฉันยอมรับ <a href="#" class="text-decoration-none">เงื่อนไขการใช้งาน</a> 
+                                และ <a href="#" class="text-decoration-none">นโยบายความเป็นส่วนตัว</a>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newsletter">
+                            <label class="form-check-label" for="newsletter">
+                                รับข่าวสารและโปรโมชั่นทางอีเมล
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3">
+                        <i class="fas fa-user-plus me-2"></i>สมัครสมาชิก
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <p class="mb-2">มีบัญชีอยู่แล้ว?</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Toggle password visibility
+    $('#toggle-password').click(function() {
+        const passwordField = $('#password');
+        const passwordFieldType = passwordField.attr('type');
+        const icon = $(this).find('i');
+        
+        if (passwordFieldType === 'password') {
+            passwordField.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+    
+    // Password confirmation validation
+    $('#confirm_password').on('input', function() {
+        const password = $('#password').val();
+        const confirmPassword = $(this).val();
+        
+        if (confirmPassword && password !== confirmPassword) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">รหัสผ่านไม่ตรงกัน</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+    
+    // Username validation (English and numbers only)
+    $('#username').on('input', function() {
+        const username = $(this).val();
+        const validUsername = /^[a-zA-Z0-9_]+$/.test(username);
+        
+        if (username && !validUsername) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษ ตัวเลข และ _ เท่านั้น</div>');
+            }
+        } else if (username && username.length < 3) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            if (username) $(this).addClass('is-valid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+    
+    // Phone validation (Thai format)
+    $('#phone').on('input', function() {
+        const phone = $(this).val().replace(/[-\s]/g, '');
+        const validPhone = /^[0-9]{9,10}$/.test(phone);
+        
+        if ($(this).val() && !validPhone) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">รูปแบบเบอร์โทรไม่ถูกต้อง</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            if ($(this).val()) $(this).addClass('is-valid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+    
+    // Form validation
+    $('#register-form').on('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        $(this).find('input[required]').each(function() {
+            if (!$(this).val().trim()) {
+                $(this).addClass('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        // Check password confirmation
+        const password = $('#password').val();
+        const confirmPassword = $('#confirm_password').val();
+        
+        if (password !== confirmPassword) {
+            $('#confirm_password').addClass('is-invalid');
+            isValid = false;
+        }
+        
+        // Check terms acceptance
+        if (!$('#accept_terms').is(':checked')) {
+            showToast('กรุณายอมรับเงื่อนไขการใช้งาน', 'warning');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            showToast('กรุณากรอกข้อมูลให้ถูกต้องและครบถ้วน', 'warning');
+            return;
+        }
+        
+        // Show loading
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>กำลังสมัครสมาชิก...');
+        
+        // Restore button after 5 seconds (in case of server error)
+        setTimeout(() => {
+            submitBtn.prop('disabled', false).html(originalText);
+        }, 5000);
+    });
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        // Create toast if not exists
+        if (!$('#toast').length) {
+            $('body').append(`
+                <div class="toast-container position-fixed bottom-0 end-0 p-3">
+                    <div id="toast" class="toast align-items-center border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body"></div>
+                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+        
+        const toast = $('#toast');
+        const toastBody = toast.find('.toast-body');
+        
+        // Set message and type
+        toastBody.text(message);
+        
+        // Remove existing type classes
+        toast.removeClass('toast-success toast-error toast-warning toast-info bg-success bg-danger bg-warning bg-info');
+        
+        // Add appropriate class
+        switch(type) {
+            case 'success':
+                toast.addClass('bg-success text-white');
+                break;
+            case 'error':
+                toast.addClass('bg-danger text-white');
+                break;
+            case 'warning':
+                toast.addClass('bg-warning text-dark');
+                break;
+            default:
+                toast.addClass('bg-info text-white');
+        }
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast[0], {
+            autohide: true,
+            delay: 4000
+        });
+        
+        bsToast.show();
+    }
+});
+</script>
+{% endblock %}

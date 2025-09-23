@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="th" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sweet Dreams Bakery - เบเกอรี่พรีเมียมคุณภาพสูง ขนมและเค้กสดใหม่ทุกวัน">
+    <meta name="keywords" content="เบเกอรี่, เค้ก, ขนมปัง, กาแฟ, ขนมหวาน, เชียงราย">
+    <meta name="author" content="Sweet Dreams Bakery">
+    
+    <title>{% block title %}Sweet Dreams Bakery - เบเกอรี่พรีเมียมคุณภาพสูง{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    
+    <!-- Bootstrap 5.0.2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome 6.4.0 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% if session.get('role') == 'admin' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    {% endif %}
+    
+    <!-- Additional CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar bg-primary text-white py-2">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <small class="d-flex align-items-center flex-wrap gap-3">
+                        <span><i class="fas fa-clock me-2"></i>เปิดทุกวัน 07:00 - 20:00</span>
+                        <span><i class="fas fa-phone me-2"></i>089-123-4567</span>
+                        <span><i class="fas fa-map-marker-alt me-2"></i>เชียงราย, ประเทศไทย</span>
+                    </small>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if session.get('user_id') %}
+                        <small>
+                            <i class="fas fa-user me-2"></i>
+                            สวัสดี, {{ session.get('full_name') or session.get('username') }}
+                        </small>
+                    {% else %}
+                        <small>
+                            <a href="{{ url_for('login') }}" class="text-white text-decoration-none me-3">
+                                <i class="fas fa-sign-in-alt me-1"></i>เข้าสู่ระบบ
+                            </a>
+                            <a href="{{ url_for('register') }}" class="text-white text-decoration-none">
+                                <i class="fas fa-user-plus me-1"></i>สมัครสมาชิก
+                            </a>
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container">
+            <!-- Brand/Logo -->
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                <div class="logo-container me-3">
+                    <div class="logo-circle">
+                        <i class="fas fa-birthday-cake"></i>
+                    </div>
+                </div>
+                <div class="brand-info d-none d-md-block">
+                    <h4 class="mb-0 brand-name">Sweet Dreams</h4>
+                    <small class="text-muted">Premium Bakery</small>
+                </div>
+            </a>
+
+            <!-- Mobile Toggle -->
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navigation Links -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link fw-500 {% if request.endpoint == 'index' %}active{% endif %}" 
+                           href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i>หน้าหลัก
+                        </a>
+                    </li>
+                    
+                    <!-- Categories Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-500" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-th-large me-1"></i>หมวดหมู่สินค้า
+                        </a>
+                        <ul class="dropdown-menu shadow-sm border-0">
+                            {% if categories %}
+                                {% for category in categories %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('category_by_id', category_id=category.id) }}">
+                                        <i class="{{ category.icon }} me-2 text-primary"></i>{{ category.name }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('index') }}#products">
+                                    <i class="fas fa-list me-2 text-primary"></i>ดูสินค้าทั้งหมด
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link fw-500" href="{{ url_for('index') }}#about">
+                            <i class="fas fa-info-circle me-1"></i>เกี่ยวกับเรา
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link fw-500" href="{{ url_for('index') }}#contact">
+                            <i class="fas fa-envelope me-1"></i>ติดต่อ
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Right Side Navigation -->
+                <ul class="navbar-nav ms-auto">
+                    <!-- Cart -->
+                    <li class="nav-item me-3">
+                        <a class="nav-link position-relative fw-500 cart-link" href="{{ url_for('cart') }}">
+                            <i class="fas fa-shopping-cart me-1"></i>
+                            <span class="d-none d-lg-inline">ตะกร้า</span>
+                            {% if cart_total_items and cart_total_items > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-badge">
+                                {{ cart_total_items }}
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+
+                    <!-- User Menu -->
+                    {% if session.get('user_id') %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle fw-500" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>
+                                <span class="d-none d-lg-inline">{{ session.get('full_name') or session.get('username') }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('profile') }}">
+                                        <i class="fas fa-user me-2"></i>โปรไฟล์
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#">
+                                        <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อ
+                                    </a>
+                                </li>
+                                {% if session.get('role') == 'admin' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-primary" href="{{ url_for('admin') }}">
+                                        <i class="fas fa-cog me-2"></i>จัดการสินค้า
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-primary" href="{{ url_for('admin_orders') }}">
+                                        <i class="fas fa-shopping-cart me-2"></i>จัดการคำสั่งซื้อ
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                        <i class="fas fa-sign-out-alt me-2"></i>ออกจากระบบ
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item me-2">
+                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>เข้าสู่ระบบ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">
+                                <i class="fas fa-user-plus me-1"></i>สมัครสมาชิก
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white mt-5">
+        <div class="container py-5">
+            <div class="row gy-4">
+                <!-- Company Info -->
+                <div class="col-lg-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="logo-circle bg-primary me-3">
+                            <i class="fas fa-birthday-cake text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 text-primary">Sweet Dreams Bakery</h5>
+                            <small class="text-muted">Premium Artisan Bakery</small>
+                        </div>
+                    </div>
+                    <p class="text-light">
+                        เบเกอรี่พรีเมียมที่ผลิตขนมและเค้กสดใหม่ทุกวัน 
+                        ด้วยวัตถุดิบคุณภาพสูงและความใส่ใจในทุกรายละเอียด
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-primary fs-5"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-primary fs-5"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-primary fs-5"><i class="fab fa-line"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="text-primary mb-3">เมนูหลัก</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{{ url_for('index') }}" class="text-light text-decoration-none">หน้าหลัก</a></li>
+                        <li class="mb-2"><a href="{{ url_for('index') }}#about" class="text-light text-decoration-none">เกี่ยวกับเรา</a></li>
+                        <li class="mb-2"><a href="{{ url_for('index') }}#products" class="text-light text-decoration-none">สินค้า</a></li>
+                        <li class="mb-2"><a href="{{ url_for('index') }}#contact" class="text-light text-decoration-none">ติดต่อ</a></li>
+                    </ul>
+                </div>
+
+                <!-- Categories -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="text-primary mb-3">หมวดหมู่</h6>
+                    <ul class="list-unstyled">
+                        {% if categories %}
+                            {% for category in categories[:4] %}
+                            <li class="mb-2">
+                                <a href="{{ url_for('category_by_id', category_id=category.id) }}" class="text-light text-decoration-none">
+                                    {{ category.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="col-lg-4">
+                    <h6 class="text-primary mb-3">ติดต่อเรา</h6>
+                    <div class="mb-3">
+                        <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                        <span class="text-light">123 ถนนพหลโยธิน เชียงราย 57000</span>
+                    </div>
+                    <div class="mb-3">
+                        <i class="fas fa-phone text-primary me-2"></i>
+                        <span class="text-light">089-123-4567</span>
+                    </div>
+                    <div class="mb-3">
+                        <i class="fas fa-envelope text-primary me-2"></i>
+                        <span class="text-light">info@sweetdreams-bakery.com</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        <span class="text-light">เปิดทุกวัน 07:00 - 20:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Copyright -->
+        <div class="bg-black py-3">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            © 2024 Sweet Dreams Bakery. All rights reserved.
+                        </small>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <small class="text-muted">
+                            Made with <i class="fas fa-heart text-danger"></i> in Chiang Rai
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
+        <div id="toast" class="toast align-items-center border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay d-none" id="loading-overlay">
+        <div class="d-flex align-items-center justify-content-center" style="min-height: 100px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.0.2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery (for easier AJAX handling) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- Cart JavaScript -->
+    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+    
+    <!-- Admin JavaScript if user is admin -->
+    {% if session.get('role') == 'admin' %}
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    {% endif %}
+    
+    <!-- Additional JavaScript -->
+    {% block extra_js %}{% endblock %}
+
+    <!-- Initialize tooltips and popovers -->
+    <script>
+        // Initialize Bootstrap tooltips and popovers
+        $(document).ready(function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+            
+            // Auto-hide alerts after 5 seconds
+            setTimeout(function() {
+                $('.alert').fadeOut();
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

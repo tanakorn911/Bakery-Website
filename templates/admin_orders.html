@@ -1,0 +1,381 @@
+{% extends "layout.html" %}
+
+{% block title %}จัดการคำสั่งซื้อ - Admin{% endblock %}
+
+
+
+{% block content %}
+<div class="container-fluid admin-container">
+    <div class="admin-header">
+        <h1 class="admin-title mb-3">
+            <i class="fas fa-shopping-cart me-3"></i>
+            จัดการคำสั่งซื้อ
+        </h1>
+        <p class="lead mb-0">ตรวจสอบและจัดการคำสั่งซื้อทั้งหมด</p>
+    </div>
+
+    <!-- Orders Statistics -->
+    <div class="admin-stats">
+        <div class="row gy-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-orders">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-number">{{ orders|selectattr("status", "equalto", "pending")|list|length }}</div>
+                    <div class="stat-label">รอดำเนินการ</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-products">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-number">{{ orders|selectattr("status", "equalto", "completed")|list|length }}</div>
+                    <div class="stat-label">เสร็จสิ้น</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-users">
+                    <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-number">{{ orders|selectattr("status", "equalto", "cancelled")|list|length }}</div>
+                    <div class="stat-label">ยกเลิกแล้ว</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card stat-revenue">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-number">{{ orders|length }}</div>
+                    <div class="stat-label">ทั้งหมด</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="products-section">
+        <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    รายการคำสั่งซื้อ
+                </h3>
+                <div class="d-flex gap-2">
+                    <select class="form-select form-select-sm" id="filter-status">
+                        <option value="">ทุกสถานะ</option>
+                        <option value="pending">รอดำเนินการ</option>
+                        <option value="processing">กำลังจัดเตรียม</option>
+                        <option value="completed">เสร็จสิ้น</option>
+                        <option value="cancelled">ยกเลิกแล้ว</option>
+                    </select>
+                    <button class="btn btn-sm btn-success" onclick="refreshOrders()">
+                        <i class="fas fa-sync me-1"></i>รีเฟรช
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            {% if orders %}
+            <table class="table table-hover products-table">
+                <thead>
+                    <tr>
+                        <th width="80">คำสั่งซื้อ</th>
+                        <th>ลูกค้า</th>
+                        <th width="100">จำนวนรายการ</th>
+                        <th width="120">ยอดรวม</th>
+                        <th width="100">สถานะ</th>
+                        <th width="150">วันที่</th>
+                        <th width="180">การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr data-order-id="{{ order.id }}" data-status="{{ order.status }}">
+                        <td>
+                            <strong>#{{ order.id }}</strong>
+                        </td>
+                        <td>
+                            <div class="fw-600">{{ order.customer_name }}</div>
+                            <small class="text-muted">{{ order.customer_phone }}</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark">{{ order.item_count }} รายการ</span>
+                        </td>
+                        <td class="fw-600 text-primary">
+                            {{ "%.0f"|format(order.total_amount) }} ฿
+                        </td>
+                        <td>
+                            {% if order.status == 'pending' %}
+                                <span class="status-badge bg-warning text-dark">รอดำเนินการ</span>
+                            {% elif order.status == 'processing' %}
+                                <span class="status-badge bg-info text-white">กำลังจัดเตรียม</span>
+                            {% elif order.status == 'completed' %}
+                                <span class="status-badge bg-success text-white">เสร็จสิ้น</span>
+                            {% elif order.status == 'cancelled' %}
+                                <span class="status-badge bg-danger text-white">ยกเลิกแล้ว</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ order.created_at }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-outline-primary btn-action" 
+                                        onclick="viewOrder({{ order.id }})"
+                                        data-bs-toggle="tooltip" title="ดูรายละเอียด">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                {% if order.status == 'pending' %}
+                                <button class="btn btn-outline-success btn-action"
+                                        onclick="updateOrderStatus({{ order.id }}, 'processing')"
+                                        data-bs-toggle="tooltip" title="รับออเดอร์">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if order.status == 'processing' %}
+                                <button class="btn btn-outline-info btn-action"
+                                        onclick="updateOrderStatus({{ order.id }}, 'completed')"
+                                        data-bs-toggle="tooltip" title="ทำเสร็จแล้ว">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if order.status in ['pending', 'processing'] %}
+                                <button class="btn btn-outline-danger btn-action"
+                                        onclick="updateOrderStatus({{ order.id }}, 'cancelled')"
+                                        data-bs-toggle="tooltip" title="ยกเลิกออเดอร์">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                                
+                                <button class="btn btn-outline-secondary btn-action"
+                                        onclick="printOrder({{ order.id }})"
+                                        data-bs-toggle="tooltip" title="พิมพ์">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">ยังไม่มีคำสั่งซื้อ</h5>
+                <p class="text-muted">คำสั่งซื้อจะแสดงที่นี่เมื่อมีลูกค้าสั่งซื้อ</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">รายละเอียดคำสั่งซื้อ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderModalBody">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">กำลังโหลด...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+$(document).ready(function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Status filter
+    $('#filter-status').change(function() {
+        const status = $(this).val();
+        
+        if (status === '') {
+            $('tbody tr').show();
+        } else {
+            $('tbody tr').hide();
+            $(`tbody tr[data-status="${status}"]`).show();
+        }
+    });
+});
+
+function viewOrder(orderId) {
+    $('#orderModal').modal('show');
+    
+    // Load order details
+    $.get(`/order/${orderId}`, function(data) {
+        // This would load the order detail content
+        $('#orderModalBody').html(`
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                คลิกที่หมายเลขคำสั่งซื้อเพื่อดูรายละเอียดเต็ม
+            </div>
+            <div class="text-center">
+                <a href="/order/${orderId}" class="btn btn-primary" target="_blank">
+                    ดูรายละเอียดเต็ม
+                </a>
+            </div>
+        `);
+    }).fail(function() {
+        $('#orderModalBody').html(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ไม่สามารถโหลดข้อมูลได้
+            </div>
+        `);
+    });
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    let confirmMessage = '';
+    
+    switch(newStatus) {
+        case 'processing':
+            confirmMessage = 'ยืนยันรับออเดอร์นี้?';
+            break;
+        case 'completed':
+            confirmMessage = 'ยืนยันว่าออเดอร์นี้เสร็จสิ้นแล้ว?';
+            break;
+        case 'cancelled':
+            confirmMessage = 'ยืนยันยกเลิกออเดอร์นี้? การดำเนินการนี้ไม่สามารถยกเลิกได้';
+            break;
+    }
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    const row = $(`tr[data-order-id="${orderId}"]`);
+    row.addClass('loading-row');
+    
+    $.ajax({
+        url: `/admin/update_order_status/${orderId}`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ status: newStatus }),
+        success: function(response) {
+            if (response.success) {
+                // Update status badge
+                const statusCell = row.find('td:nth-child(5)');
+                let badgeClass = '';
+                let statusText = '';
+                
+                switch(newStatus) {
+                    case 'processing':
+                        badgeClass = 'bg-info text-white';
+                        statusText = 'กำลังจัดเตรียม';
+                        break;
+                    case 'completed':
+                        badgeClass = 'bg-success text-white';
+                        statusText = 'เสร็จสิ้น';
+                        break;
+                    case 'cancelled':
+                        badgeClass = 'bg-danger text-white';
+                        statusText = 'ยกเลิกแล้ว';
+                        break;
+                }
+                
+                statusCell.html(`<span class="status-badge ${badgeClass}">${statusText}</span>`);
+                row.attr('data-status', newStatus);
+                
+                // Update action buttons
+                updateActionButtons(row, newStatus);
+                
+                showAdminToast(`อัปเดตสถานะออเดอร์ #${orderId} เรียบร้อยแล้ว`, 'success');
+            } else {
+                showAdminToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+        },
+        error: function() {
+            showAdminToast('เกิดข้อผิดพลาดในการอัปเดตสถานะ', 'error');
+        },
+        complete: function() {
+            row.removeClass('loading-row');
+        }
+    });
+}
+
+function updateActionButtons(row, status) {
+    const actionCell = row.find('td:last-child .action-buttons');
+    
+    // Always keep view and print buttons
+    let buttons = `
+        <button class="btn btn-outline-primary btn-action" 
+                onclick="viewOrder(${row.data('order-id')})"
+                data-bs-toggle="tooltip" title="ดูรายละเอียด">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button class="btn btn-outline-secondary btn-action"
+                onclick="printOrder(${row.data('order-id')})"
+                data-bs-toggle="tooltip" title="พิมพ์">
+            <i class="fas fa-print"></i>
+        </button>
+    `;
+    
+    // Add status-specific buttons
+    if (status === 'pending') {
+        buttons = `
+            <button class="btn btn-outline-success btn-action"
+                    onclick="updateOrderStatus(${row.data('order-id')}, 'processing')"
+                    data-bs-toggle="tooltip" title="รับออเดอร์">
+                <i class="fas fa-check"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-action"
+                    onclick="updateOrderStatus(${row.data('order-id')}, 'cancelled')"
+                    data-bs-toggle="tooltip" title="ยกเลิกออเดอร์">
+                <i class="fas fa-times"></i>
+            </button>
+        ` + buttons;
+    } else if (status === 'processing') {
+        buttons = `
+            <button class="btn btn-outline-info btn-action"
+                    onclick="updateOrderStatus(${row.data('order-id')}, 'completed')"
+                    data-bs-toggle="tooltip" title="ทำเสร็จแล้ว">
+                <i class="fas fa-check-double"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-action"
+                    onclick="updateOrderStatus(${row.data('order-id')}, 'cancelled')"
+                    data-bs-toggle="tooltip" title="ยกเลิกออเดอร์">
+                <i class="fas fa-times"></i>
+            </button>
+        ` + buttons;
+    }
+    
+    actionCell.html(buttons);
+    
+    // Re-initialize tooltips
+    actionCell.find('[data-bs-toggle="tooltip"]').tooltip();
+}
+
+function printOrder(orderId) {
+    window.open(`/admin/print_order/${orderId}`, '_blank');
+}
+
+function refreshOrders() {
+    location.reload();
+}
+</script>
+{% endblock %}
