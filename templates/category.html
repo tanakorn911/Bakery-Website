@@ -74,13 +74,6 @@
                             <i class="fas fa-birthday-cake"></i>
                         {% endif %}
                         
-                        <div class="product-overlay">
-                            <a href="{{ url_for('category_by_id', category_id=product.category_id) }}"
-                               class="btn btn-light btn-sm quick-view">
-                                <i class="fas fa-eye me-1"></i>ดูรายละเอียด
-                            </a>
-                        </div>
-                        
                         {% if product.is_featured %}
                         <div class="position-absolute top-0 start-0 m-2">
                             <span class="badge bg-warning">

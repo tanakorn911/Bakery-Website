@@ -51,7 +51,17 @@ function setupEventListeners() {
     $('#search-input').on('input', debounce(handleSearch, 300));
     
     // Category filter
-    $('.category-filter').on('click', handleCategoryFilter);
+    $(document).on('click', '.category-filter', function() {
+        const category = $(this).data('category');
+        $('.category-filter').removeClass('active');
+        $(this).addClass('active');
+        if (category === 'all') {
+            $('.category-section').show();
+        } else {
+            $('.category-section').hide();
+            $(`.category-section[data-category="${category}"]`).show();
+        }
+    });
     
     // Smooth scroll for anchor links
     $('a[href^="#"]').on('click', handleSmoothScroll);

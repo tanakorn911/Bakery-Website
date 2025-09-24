@@ -41,7 +41,29 @@ function setupCartEventListeners() {
     $(document).on('click', '.remove-from-cart', handleRemoveItem);
     
     // Add to cart buttons
-    $(document).on('click', '.add-to-cart', handleAddToCart);
+    $(document).on('click', '.add-to-cart', function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const productId = btn.data('product-id');
+        const quantity = 1;
+        $.ajax({
+            url: '/add_to_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                product_id: productId,
+                quantity: quantity
+            }),
+            success: function(response) {
+                if (response.success) {
+                    $('#cart-badge').text(response.total_items).show();
+                    showToast(response.message);
+                } else {
+                    showToast(response.message || 'เกิดข้อผิดพลาด', true);
+                }
+            }
+        });
+    });
     
     // Clear cart
     $('#clear-cart').on('click', handleClearCart);
@@ -133,58 +155,6 @@ function handleRemoveItem(e) {
 }
 
 /**
- * Handle add to cart
- */
-function handleAddToCart(e) {
-    e.preventDefault();
-    
-    if (cartData.isUpdating) {
-        showCartToast('กรุณารอสักครู่...', 'info');
-        return;
-    }
-    
-    const button = $(this);
-    const productId = button.data('product-id');
-    const productName = button.data('product-name');
-    const productPrice = parseFloat(button.data('product-price'));
-    const quantity = parseInt(button.data('quantity')) || 1;
-    
-    // Get options if available
-    let options = '';
-    const optionInputs = button.closest('.product-card, .product-details').find('input[name="product-option"]:checked');
-    if (optionInputs.length) {
-        options = optionInputs.val();
-    }
-    
-    // Prepare data
-    const itemData = {
-        product_id: productId,
-        quantity: quantity,
-        options: options
-    };
-    
-    // Show loading state
-    const originalText = button.html();
-    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>กำลังเพิ่ม...');
-    
-    // Add to cart
-    addToCart(itemData).then(response => {
-        if (response.success) {
-            showCartToast(response.message || `เพิ่ม ${productName} ลงตะกร้าแล้ว`, 'success');
-            animateAddToCart(button);
-            updateCartBadge(response.total_items);
-        } else {
-            showCartToast(response.message || 'เกิดข้อผิดพลาด', 'error');
-        }
-    }).catch(error => {
-        console.error('Cart Error:', error);
-        showCartToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
-    }).finally(() => {
-        button.prop('disabled', false).html(originalText);
-    });
-}
-
-/**
  * Handle clear cart
  */
 function handleClearCart() {
@@ -257,4 +227,16 @@ function handleCheckout() {
     
     // Proceed to checkout
     window.location.href = '/checkout';
+}
+
+/**
+ * Show toast message
+ */
+function showToast(message, isError) {
+    const toast = $('#toast');
+    toast.find('.toast-body').text(message);
+    toast.removeClass('bg-danger bg-success');
+    toast.addClass(isError ? 'bg-danger' : 'bg-success');
+    toast.toast({ delay: 2500 });
+    toast.toast('show');
 }
