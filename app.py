@@ -735,135 +735,114 @@ def admin_orders():
 # Admin API Routes
 # ========================
 
+@app.route('/admin/product/<int:product_id>', methods=['GET'])
+def get_product(product_id):
+    conn = get_db_connection()
+    product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+    conn.close()
+    if product:
+        return jsonify(dict(product))
+    return jsonify({'error': 'ไม่พบสินค้า'}), 404
+
+
 @app.route('/admin/add_product', methods=['POST'])
 def add_product():
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
     data = request.get_json()
     conn = get_db_connection()
-    try:
-        cursor = conn.execute("""
-            INSERT INTO products 
-            (name, name_en, description, price, image, category_id, is_available, is_featured, stock_quantity)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            data['name'],
-            data.get('name_en', ''),
-            data.get('description', ''),
-            float(data['price']),
-            data.get('image', ''),
-            int(data['category_id']),
-            bool(data.get('is_available', True)),
-            bool(data.get('is_featured', False)),
-            int(data.get('stock_quantity', 0))
-        ))
-        conn.commit()
-        return jsonify({
-            'success': True, 
-            'message': 'เพิ่มสินค้าเรียบร้อยแล้ว',
-            'product_id': cursor.lastrowid
-        })
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
-    finally:
-        conn.close()
+    conn.execute('''
+        INSERT INTO products (name, name_en, description, price, image, category_id, is_available, is_featured, stock_quantity)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['name'], data.get('name_en'), data.get('description'), data['price'],
+        data.get('image'), data['category_id'], data.get('is_available', 0),
+        data.get('is_featured', 0), data.get('stock_quantity', 0)
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 
 @app.route('/admin/update_product/<int:product_id>', methods=['POST'])
 def update_product(product_id):
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
     data = request.get_json()
     conn = get_db_connection()
-    try:
-        conn.execute("""
-            UPDATE products SET
-            name = ?, name_en = ?, description = ?, price = ?, 
-            image = ?, category_id = ?, is_available = ?, is_featured = ?, stock_quantity = ?
-            WHERE id = ?
-        """, (
-            data['name'],
-            data.get('name_en', ''),
-            data.get('description', ''),
-            float(data['price']),
-            data.get('image', ''),
-            int(data['category_id']),
-            bool(data.get('is_available', True)),
-            bool(data.get('is_featured', False)),
-            int(data.get('stock_quantity', 0)),
-            product_id
-        ))
-        conn.commit()
-        return jsonify({'success': True, 'message': 'อัปเดตสินค้าเรียบร้อยแล้ว'})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
-    finally:
-        conn.close()
+    conn.execute('''
+        UPDATE products SET 
+            name=?, name_en=?, description=?, price=?, image=?, 
+            category_id=?, is_available=?, is_featured=?, stock_quantity=?
+        WHERE id=?
+    ''', (
+        data['name'], data.get('name_en'), data.get('description'), data['price'],
+        data.get('image'), data['category_id'], data.get('is_available', 0),
+        data.get('is_featured', 0), data.get('stock_quantity', 0), product_id
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 
 @app.route('/admin/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
     conn = get_db_connection()
-    try:
-        conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
-        conn.commit()
-        return jsonify({'success': True, 'message': 'ลบสินค้าเรียบร้อยแล้ว'})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
-    finally:
-        conn.close()
+    conn.execute('DELETE FROM products WHERE id=?', (product_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
 
 @app.route('/admin/toggle_product_status/<int:product_id>', methods=['POST'])
 def toggle_product_status(product_id):
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
-    data = request.get_json()
-    new_status = data.get('status')
     conn = get_db_connection()
-    try:
-        conn.execute("UPDATE products SET is_available = ? WHERE id = ?", (new_status, product_id))
+    product = conn.execute('SELECT is_available FROM products WHERE id=?', (product_id,)).fetchone()
+    if product:
+        new_status = 0 if product['is_available'] else 1
+        conn.execute('UPDATE products SET is_available=? WHERE id=?', (new_status, product_id))
         conn.commit()
-        return jsonify({'success': True, 'message': 'อัปเดตสถานะเรียบร้อยแล้ว'})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
-    finally:
         conn.close()
+        return jsonify({'success': True, 'new_status': new_status})
+    conn.close()
+    return jsonify({'success': False, 'message': 'ไม่พบสินค้า'}), 404
+
 
 @app.route('/admin/toggle_product_featured/<int:product_id>', methods=['POST'])
 def toggle_product_featured(product_id):
-    if session.get('role') != 'admin':
-        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
-    data = request.get_json()
-    new_featured = data.get('featured')
     conn = get_db_connection()
-    try:
-        conn.execute("UPDATE products SET is_featured = ? WHERE id = ?", (new_featured, product_id))
+    product = conn.execute('SELECT is_featured FROM products WHERE id=?', (product_id,)).fetchone()
+    if product:
+        new_featured = 0 if product['is_featured'] else 1
+        conn.execute('UPDATE products SET is_featured=? WHERE id=?', (new_featured, product_id))
         conn.commit()
-        return jsonify({'success': True, 'message': 'อัปเดตสถานะแนะนำเรียบร้อยแล้ว'})
-    except Exception as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
-    finally:
         conn.close()
+        return jsonify({'success': True, 'new_featured': new_featured})
+    conn.close()
+    return jsonify({'success': False, 'message': 'ไม่พบสินค้า'}), 404
 
 @app.route('/admin/update_order_status/<int:order_id>', methods=['POST'])
 def update_order_status(order_id):
     if session.get('role') != 'admin':
         return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
+
     data = request.get_json()
     new_status = data.get('status')
+
     valid_statuses = ['pending', 'processing', 'completed', 'cancelled']
     if new_status not in valid_statuses:
         return jsonify({'success': False, 'message': 'สถานะไม่ถูกต้อง'})
+
     conn = get_db_connection()
     try:
+
+        order = conn.execute("SELECT id FROM orders WHERE id = ?", (order_id,)).fetchone()
+        if not order:
+            return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
+
         conn.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
         conn.commit()
-        return jsonify({'success': True, 'message': 'อัปเดตสถานะเรียบร้อยแล้ว'})
+        return jsonify({
+            'success': True,
+            'message': 'อัปเดตสถานะเรียบร้อยแล้ว',
+            'new_status': new_status
+        })
     except Exception as e:
         conn.rollback()
         return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
