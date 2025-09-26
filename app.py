@@ -538,7 +538,7 @@ def checkout():
                recipient_name || ', ' || address || 
                CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
                CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
-               CASE WHEN country IS NOT NULL THEN ', ' || country ELSE '' END
+               CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
                AS full_address
         FROM addresses
         WHERE user_id = ?
@@ -556,7 +556,7 @@ def checkout():
         # ดึงที่อยู่จริงจาก id
         conn = get_db_connection()
         address_row = conn.execute("SELECT * FROM addresses WHERE id = ?", (customer_address_id,)).fetchone()
-        customer_address = f"{address_row['recipient_name']}, {address_row['address']}, {address_row['city'] or ''}, {address_row['postal_code'] or ''}, {address_row['country'] or ''}"
+        customer_address = f"{address_row['recipient_name']}, {address_row['address']}, {address_row['city'] or ''}, {address_row['postal_code'] or ''}, {address_row['province'] or ''}"
 
         try:
             cursor = conn.execute("""
