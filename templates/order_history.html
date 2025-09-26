@@ -24,7 +24,7 @@
                 <td>{{ "%.2f"|format(order.total_amount) }}</td>
                 <td>{{ order.created_at | datetimeformat }}</td>
                 <td>{{ order.status }}</td>
-                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">ดู</a></td>
+                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">ดูรายละเอียด</a></td>
             </tr>
             {% endfor %}
         </tbody>

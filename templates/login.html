@@ -1,4 +1,3 @@
-<!-- templates/login.html -->
 {% extends "layout.html" %}
 
 {% block title %}เข้าสู่ระบบ - Sweet Dreams Bakery{% endblock %}
@@ -8,7 +7,6 @@
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
             <div class="form-custom">
-                <!-- Logo -->
                 <div class="text-center mb-4">
                     <div class="logo-circle mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
                         <i class="fas fa-birthday-cake"></i>
@@ -17,23 +15,20 @@
                     <p class="text-muted">ยินดีต้อนรับกลับสู่ Sweet Dreams Bakery</p>
                 </div>
 
-                <!-- Login Form -->
                 <form method="POST" id="login-form">
                     <div class="mb-3">
-                        <label for="username" class="form-label">
-                            <i class="fas fa-user me-2"></i>ชื่อผู้ใช้
-                        </label>
-                        <input type="text" class="form-control" id="username" name="username" 
-                               required placeholder="กรอกชื่อผู้ใช้">
+                        <label for="username" class="form-label"><i class="fas fa-user me-2"></i>ชื่อผู้ใช้</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               required placeholder="กรอกชื่อผู้ใช้"
+                               value="{{ remembered_username }}">
                     </div>
 
                     <div class="mb-3">
-                        <label for="password" class="form-label">
-                            <i class="fas fa-lock me-2"></i>รหัสผ่าน
-                        </label>
+                        <label for="password" class="form-label"><i class="fas fa-lock me-2"></i>รหัสผ่าน</label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   required placeholder="กรอกรหัสผ่าน">
+                            <input type="password" class="form-control" id="password" name="password"
+                                   required placeholder="กรอกรหัสผ่าน"
+                                   value="{{ remembered_password }}">
                             <button class="btn btn-outline-secondary" type="button" id="toggle-password">
                                 <i class="fas fa-eye"></i>
                             </button>
@@ -41,10 +36,9 @@
                     </div>
 
                     <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember-me">
-                        <label class="form-check-label" for="remember-me">
-                            จดจำการเข้าสู่ระบบ
-                        </label>
+                        <input type="checkbox" class="form-check-input" id="remember-me" name="remember-me" value="1"
+                            {% if remembered_username and remembered_password %} checked {% endif %}>
+                        <label class="form-check-label" for="remember-me">จดจำการเข้าสู่ระบบ</label>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 mb-3">
@@ -52,7 +46,7 @@
                     </button>
 
                     <div class="text-center">
-                        <a href="#" class="text-decoration-none">ลืมรหัสผ่าน?</a>
+                        <a href="{{ url_for('forgot_password') }}" class="text-decoration-none">ลืมรหัสผ่าน?</a>
                     </div>
                 </form>
 
@@ -64,31 +58,21 @@
                         <i class="fas fa-user-plus me-2"></i>สมัครสมาชิก
                     </a>
                 </div>
-
-                <!-- Demo Account Info -->
-                <div class="mt-4 p-3 bg-light rounded">
-                    <h6 class="text-primary mb-2">
-                        <i class="fas fa-info-circle me-2"></i>บัญชีทดลอง
-                    </h6>
-                    <small class="text-muted">
-                        <strong>แอดมิน:</strong> username: admin, password: admin123<br>
-                        <strong>ลูกค้า:</strong> สร้างบัญชีใหม่ หรือใช้บัญชีที่มีอยู่
-                    </small>
-                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Toggle password visibility
+    // Toggle password
     $('#toggle-password').click(function() {
         const passwordField = $('#password');
-        const passwordFieldType = passwordField.attr('type');
         const icon = $(this).find('i');
-        
-        if (passwordFieldType === 'password') {
+        if (passwordField.attr('type') === 'password') {
             passwordField.attr('type', 'text');
             icon.removeClass('fa-eye').addClass('fa-eye-slash');
         } else {
@@ -96,24 +80,20 @@ $(document).ready(function() {
             icon.removeClass('fa-eye-slash').addClass('fa-eye');
         }
     });
-    
-    // Form validation
+
+    // Form validation & loading
     $('#login-form').on('submit', function(e) {
         const username = $('#username').val().trim();
         const password = $('#password').val().trim();
-        
         if (!username || !password) {
             e.preventDefault();
-            showToast('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', 'warning');
+            alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
             return;
         }
-        
-        // Show loading
+
         const submitBtn = $(this).find('button[type="submit"]');
         const originalText = submitBtn.html();
         submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>กำลังเข้าสู่ระบบ...');
-        
-        // Restore button after 3 seconds (in case of server error)
         setTimeout(() => {
             submitBtn.prop('disabled', false).html(originalText);
         }, 3000);

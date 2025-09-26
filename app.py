@@ -1,11 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from functools import wraps
+import base64
+
 app = Flask(__name__)
 app.secret_key = "sweetdreams_bakery_secret_2024"
+app.permanent_session_lifetime = timedelta(days=7)
 DB_NAME = "bakery.db"
 
 # ========================
@@ -384,17 +387,39 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        remember = request.form.get("remember-me")
+
         user = get_user_by_username(username)
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['role'] = user['role']
             session['full_name'] = user['full_name']
-            flash(f'เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ {user["full_name"] or user["username"]}')
-            return redirect(url_for('admin') if user['role'] == 'admin' else url_for('index'))
+            session.permanent = True if remember else False
+
+            resp = make_response(redirect(url_for('admin') if user['role'] == 'admin' else url_for('index')))
+
+            if remember:
+                # เก็บ username + password ใน cookie
+                resp.set_cookie('remembered_username', username, max_age=30*24*60*60)
+                encoded_password = base64.b64encode(password.encode()).decode()
+                resp.set_cookie('remembered_password', encoded_password, max_age=30*24*60*60)
+            else:
+                resp.set_cookie('remembered_username', '', expires=0)
+                resp.set_cookie('remembered_password', '', expires=0)
+
+            return resp
         else:
             flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
-    return render_template('login.html')
+
+    # GET request → อ่าน cookie
+    remembered_username = request.cookies.get('remembered_username', '')
+    remembered_password = request.cookies.get('remembered_password', '')
+    if remembered_password:
+        remembered_password = base64.b64decode(remembered_password).decode()
+    return render_template('login.html', remembered_username=remembered_username, remembered_password=remembered_password)
+
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -425,11 +450,35 @@ def register():
             conn.close()
     return render_template('register.html')
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email']
+        
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        conn.close()
+
+        if user:
+            # TODO: ส่งอีเมล reset password (SMTP)
+            flash("เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณแล้ว", "info")
+        else:
+            flash("ไม่พบอีเมลนี้ในระบบ", "danger")
+
+    return render_template('forgot_password.html')
+
+
 @app.route('/logout')
 def logout():
+    remember_username = request.cookies.get('remembered_username', '')
+    remember_password = request.cookies.get('remembered_password', '')
     session.clear()
-    flash('ออกจากระบบเรียบร้อย')
-    return redirect(url_for('index'))
+    resp = make_response(redirect(url_for('login')))
+    # ถ้ามี cookie เก็บ username+password อยู่แล้วก็ให้มันเด้งต่อ
+    if remember_username and remember_password:
+        resp.set_cookie('remembered_username', remember_username, max_age=30*24*60*60)
+        resp.set_cookie('remembered_password', remember_password, max_age=30*24*60*60)
+    return resp
 
 # ========================
 # Cart Management Routes

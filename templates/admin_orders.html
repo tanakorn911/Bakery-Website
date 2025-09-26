@@ -2,7 +2,9 @@
 
 {% block title %}จัดการคำสั่งซื้อ - Admin{% endblock %}
 
-
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid admin-container">
@@ -203,7 +205,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script>
 $(document).ready(function() {
     // Initialize tooltips
@@ -227,7 +228,6 @@ function viewOrder(orderId) {
     
     // Load order details
     $.get(`/order/${orderId}`, function(data) {
-        // This would load the order detail content
         $('#orderModalBody').html(`
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
@@ -303,6 +303,9 @@ function updateOrderStatus(orderId, newStatus) {
                 
                 // Update action buttons
                 updateActionButtons(row, newStatus);
+
+                // ✅ อัปเดตสถิติด้านบน
+                updateStats();
                 
                 showAdminToast(`อัปเดตสถานะออเดอร์ #${orderId} เรียบร้อยแล้ว`, 'success');
             } else {
@@ -365,9 +368,23 @@ function updateActionButtons(row, status) {
     }
     
     actionCell.html(buttons);
-    
-    // Re-initialize tooltips
     actionCell.find('[data-bs-toggle="tooltip"]').tooltip();
+}
+
+// ✅ ฟังก์ชันอัปเดตตัวเลขสถิติด้านบน
+function updateStats() {
+    const allOrders = $('tbody tr');
+
+    const pendingCount = allOrders.filter('[data-status="pending"]').length;
+    const processingCount = allOrders.filter('[data-status="processing"]').length;
+    const completedCount = allOrders.filter('[data-status="completed"]').length;
+    const cancelledCount = allOrders.filter('[data-status="cancelled"]').length;
+    const totalCount = allOrders.length;
+
+    $('.stat-orders .stat-number').text(pendingCount);
+    $('.stat-products .stat-number').text(completedCount);
+    $('.stat-users .stat-number').text(cancelledCount);
+    $('.stat-revenue .stat-number').text(totalCount);
 }
 
 function printOrder(orderId) {
