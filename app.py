@@ -1210,6 +1210,35 @@ def delete_address(address_id):
     flash("ลบที่อยู่เรียบร้อยแล้ว")
     return redirect(url_for("address_book"))
 
+
+@app.route('/track_order', methods=['GET', 'POST'])
+def track_order():
+    order_data = None
+    if request.method == 'POST':
+        order_id = request.form['order_id']
+        conn = get_db_connection()
+        order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        
+        if order:
+            # ดึง order items
+            items = conn.execute("""
+                SELECT oi.*, p.name as product_name, p.price as product_price
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+            """, (order_id,)).fetchall()
+            
+            # แปลง row objects เป็น dict
+            items_list = [dict(item) for item in items]
+            
+            # แปลง order เป็น dict
+            order_data = dict(order)
+            order_data['order_items'] = items_list  # key ใหม่ไม่ชนกับ dict.items()
+        
+        conn.close()
+    
+    return render_template('track_order.html', order=order_data)
+
 # ========================
 # Initialize Application
 # ========================

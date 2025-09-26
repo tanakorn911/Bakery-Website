@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}ติดตามคำสั่งซื้อ{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h3 class="mb-4">ติดตามคำสั่งซื้อ</h3>
+    <form method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="text" class="form-control" name="order_id" placeholder="กรอกหมายเลขคำสั่งซื้อ" required>
+            <button class="btn btn-primary" type="submit">ติดตาม</button>
+        </div>
+    </form>
+
+    {% if order %}
+        <div class="card p-3">
+            <h4>คำสั่งซื้อ #{{ order.id }}</h4>
+            <p>ชื่อลูกค้า: {{ order.customer_name }} | โทร: {{ order.customer_phone }}</p>
+            <p>วันที่/เวลา: {{ order.created_at }} | ยอดรวม: {{ order.total_amount }} ฿</p>
+
+            <div class="mb-2">
+                สถานะ: 
+                {% if order.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">รอดำเนินการ</span>
+                {% elif order.status == 'processing' %}
+                    <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
+                {% elif order.status == 'completed' %}
+                    <span class="badge bg-success text-white">เสร็จสิ้น</span>
+                {% elif order.status == 'cancelled' %}
+                    <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
+                {% endif %}
+            </div>
+
+            {% if order %}
+            <h4>รายการสินค้า</h4>
+            <ul>
+                {% for item in order.order_items %}
+                    <li>{{ item.product_name }} x{{ item.quantity }} - {{ item.product_price }} ฿</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>ไม่พบคำสั่งซื้อ</p>
+            {% endif %}
+
+            <p>ที่อยู่จัดส่ง: {{ order.customer_address or 'ไม่ระบุ' }}</p>
+            <p>หมายเหตุ: {{ order.notes or '-' }}</p>
+        </div>
+    {% elif searched %}
+        <div class="alert alert-warning">ไม่พบคำสั่งซื้อที่มีหมายเลขนี้</div>
+    {% endif %}
+</div>
+{% endblock %}

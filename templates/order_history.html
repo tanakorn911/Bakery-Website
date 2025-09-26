@@ -7,7 +7,7 @@
     <h2 class="mb-4">ประวัติคำสั่งซื้อของคุณ</h2>
 
     {% if orders %}
-    <table class="table table-striped">
+    <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>หมายเลขคำสั่งซื้อ</th>
@@ -23,8 +23,24 @@
                 <td>#{{ order.id }}</td>
                 <td>{{ "%.2f"|format(order.total_amount) }}</td>
                 <td>{{ order.created_at | datetimeformat }}</td>
-                <td>{{ order.status }}</td>
-                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">ดูรายละเอียด</a></td>
+                <td>
+                    {% if order.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">รอดำเนินการ</span>
+                    {% elif order.status == 'processing' %}
+                        <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
+                    {% elif order.status == 'completed' %}
+                        <span class="badge bg-success text-white">เสร็จสิ้น</span>
+                    {% elif order.status == 'cancelled' %}
+                        <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
+                    {% else %}
+                        <span class="badge bg-secondary text-white">{{ order.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                        ดูรายละเอียด
+                    </a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
