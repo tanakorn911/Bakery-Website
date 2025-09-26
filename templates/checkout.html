@@ -2,636 +2,72 @@
 
 {% block title %}ชำระเงิน - Sweet Dreams Bakery{% endblock %}
 
-{% block extra_css %}
-<style>
-    .checkout-container {
-        padding-top: 2rem;
-        min-height: calc(100vh - 300px);
-    }
-    
-    .checkout-header {
-        background: var(--gradient-light);
-        border-radius: var(--border-radius);
-        padding: 2rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .step-indicator {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 2rem 0;
-    }
-    
-    .step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-    }
-    
-    .step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        top: 20px;
-        left: 60px;
-        width: 100px;
-        height: 2px;
-        background: #dee2e6;
-        z-index: -1;
-    }
-    
-    .step.active:not(:last-child)::after {
-        background: var(--primary-color);
-    }
-    
-    .step-circle {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #dee2e6;
-        color: #6c757d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .step.active .step-circle {
-        background: var(--primary-color);
-        color: white;
-    }
-    
-    .step.completed .step-circle {
-        background: #28a745;
-        color: white;
-    }
-    
-    .step-label {
-        font-size: 0.8rem;
-        color: #6c757d;
-        white-space: nowrap;
-    }
-    
-    .step.active .step-label {
-        color: var(--primary-color);
-        font-weight: 600;
-    }
-    
-    .checkout-form {
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .order-summary {
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-        padding: 2rem;
-        position: sticky;
-        top: 100px;
-    }
-    
-    .order-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem 0;
-        border-bottom: 1px solid #e9ecef;
-    }
-    
-    .order-item:last-child {
-        border-bottom: none;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 2px solid var(--secondary-color);
-        font-weight: 700;
-        font-size: 1.2rem;
-        color: var(--primary-color);
-    }
-    
-    .item-details {
-        flex: 1;
-        margin-right: 1rem;
-    }
-    
-    .item-name {
-        font-weight: 600;
-        color: var(--primary-color);
-        margin-bottom: 0.25rem;
-    }
-    
-    .item-options {
-        font-size: 0.9rem;
-        color: var(--secondary-color);
-        margin-bottom: 0.25rem;
-    }
-    
-    .item-quantity-price {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-    
-    .item-total {
-        font-weight: 600;
-        color: var(--primary-color);
-        white-space: nowrap;
-    }
-    
-    .payment-methods {
-        margin-top: 2rem;
-    }
-    
-    .payment-method {
-        border: 2px solid #e9ecef;
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        margin-bottom: 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .payment-method:hover {
-        border-color: var(--secondary-color);
-        background: #f8f9fa;
-    }
-    
-    .payment-method.selected {
-        border-color: var(--primary-color);
-        background: rgba(139, 69, 19, 0.05);
-    }
-    
-    .payment-icon {
-        width: 40px;
-        height: 40px;
-        background: var(--gradient-secondary);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        margin-right: 1rem;
-    }
-    
-    .delivery-options {
-        margin: 2rem 0;
-    }
-    
-    .delivery-option {
-        border: 2px solid #e9ecef;
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        margin-bottom: 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .delivery-option:hover {
-        border-color: var(--secondary-color);
-        background: #f8f9fa;
-    }
-    
-    .delivery-option.selected {
-        border-color: var(--primary-color);
-        background: rgba(139, 69, 19, 0.05);
-    }
-    
-    .place-order-btn {
-        background: var(--gradient-primary);
-        border: none;
-        color: white;
-        padding: 1rem 2rem;
-        font-size: 1.2rem;
-        font-weight: 600;
-        border-radius: var(--border-radius-lg);
-        width: 100%;
-        transition: var(--transition);
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .place-order-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-        color: white;
-    }
-    
-    .security-info {
-        background: #e8f5e8;
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        margin-top: 1rem;
-        text-align: center;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container checkout-container">
-    <div class="checkout-header">
-        <h1 class="display-6 mb-3">
-            <i class="fas fa-credit-card text-primary me-3"></i>
-            ชำระเงิน
-        </h1>
-        <p class="lead text-muted mb-0">กรอกข้อมูลเพื่อดำเนินการสั่งซื้อ</p>
-    </div>
+<div class="container py-5">
+    <h2>ชำระเงิน</h2>
 
-    <!-- Step Indicator -->
-    <div class="step-indicator">
-        <div class="step completed">
-            <div class="step-circle">
-                <i class="fas fa-check"></i>
-            </div>
-            <div class="step-label">เลือกสินค้า</div>
+    <form method="POST" id="checkout-form">
+        <!-- ชื่อ / เบอร์โทร -->
+        <div class="mb-3">
+            <label>ชื่อ-นามสกุล *</label>
+            <input type="text" name="customer_name" class="form-control" required value="{{ session.get('full_name','') }}">
         </div>
-        <div class="step active">
-            <div class="step-circle">2</div>
-            <div class="step-label">ข้อมูลการสั่งซื้อ</div>
-        </div>
-        <div class="step">
-            <div class="step-circle">3</div>
-            <div class="step-label">ชำระเงิน</div>
-        </div>
-        <div class="step">
-            <div class="step-circle">4</div>
-            <div class="step-label">เสร็จสิ้น</div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Checkout Form -->
-        <div class="col-lg-8">
-            <form method="POST" id="checkout-form" class="checkout-form">
-                <h4 class="mb-4">
-                    <i class="fas fa-user text-primary me-2"></i>
-                    ข้อมูลผู้สั่งซื้อ
-                </h4>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="customer_name" class="form-label">ชื่อ-นามสกุล *</label>
-                        <input type="text" class="form-control" id="customer_name" name="customer_name" 
-                               required placeholder="กรอกชื่อ-นามสกุล"
-                               value="{% if session.get('full_name') %}{{ session.get('full_name') }}{% endif %}">
-                    </div>
-                    
-                    <div class="col-md-6 mb-3">
-                        <label for="customer_phone" class="form-label">เบอร์โทรศัพท์ *</label>
-                        <input type="tel" class="form-control" id="customer_phone" name="customer_phone" 
-                               required placeholder="08x-xxx-xxxx">
-                    </div>
-                </div>
-
-                <!-- Delivery Options -->
-                <div class="delivery-options">
-                    <h5 class="mb-3">
-                        <i class="fas fa-shipping-fast text-primary me-2"></i>
-                        วิธีการรับสินค้า
-                    </h5>
-                    
-                    <div class="delivery-option selected" data-method="delivery">
-                        <div class="d-flex align-items-center">
-                            <div class="payment-icon">
-                                <i class="fas fa-truck"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1">จัดส่งถึงบ้าน</h6>
-                                <p class="text-muted mb-0 small">จัดส่งฟรีในพื้นที่เชียงราย (30-60 นาที)</p>
-                            </div>
-                            <div class="ms-auto">
-                                <span class="badge bg-success">ฟรี</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="delivery-option" data-method="pickup">
-                        <div class="d-flex align-items-center">
-                            <div class="payment-icon">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1">รับที่หน้าร้าน</h6>
-                                <p class="text-muted mb-0 small">มารับเองที่ Sweet Dreams Bakery</p>
-                            </div>
-                            <div class="ms-auto">
-                                <span class="badge bg-info">ทันที</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Delivery Address (shown when delivery is selected) -->
-                <div id="delivery-address" class="mb-4">
-                    <label for="customer_address" class="form-label">ที่อยู่จัดส่ง *</label>
-                    <textarea class="form-control" id="customer_address" name="customer_address" 
-                              rows="3" placeholder="กรอกที่อยู่สำหรับจัดส่ง..."></textarea>
-                </div>
-
-                <!-- Special Instructions -->
-                <div class="mb-4">
-                    <label for="notes" class="form-label">
-                        <i class="fas fa-sticky-note text-primary me-2"></i>
-                        หมายเหตุเพิ่มเติม
-                    </label>
-                    <textarea class="form-control" id="notes" name="notes" 
-                              rows="3" placeholder="ข้อความถึงร้าน หรือคำแนะนำพิเศษ... (ไม่บังคับ)"></textarea>
-                </div>
-
-                <!-- Payment Methods -->
-                <div class="payment-methods">
-                    <h5 class="mb-3">
-                        <i class="fas fa-credit-card text-primary me-2"></i>
-                        วิธีการชำระเงิน
-                    </h5>
-                    
-                    <div class="payment-method selected" data-method="cod">
-                        <div class="d-flex align-items-center">
-                            <div class="payment-icon">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1">เก็บเงินปลายทาง (COD)</h6>
-                                <p class="text-muted mb-0 small">ชำระเงินเมื่อได้รับสินค้า</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-method" data-method="bank">
-                        <div class="d-flex align-items-center">
-                            <div class="payment-icon">
-                                <i class="fas fa-university"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1">โอนเงินผ่านธนาคาร</h6>
-                                <p class="text-muted mb-0 small">โอนเงินและแจ้งสลิป</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-method" data-method="promptpay">
-                        <div class="d-flex align-items-center">
-                            <div class="payment-icon">
-                                <i class="fas fa-qrcode"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1">PromptPay</h6>
-                                <p class="text-muted mb-0 small">สแกน QR Code เพื่อชำระ</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terms and Conditions -->
-                <div class="mt-4">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="accept_terms" required>
-                        <label class="form-check-label" for="accept_terms">
-                            ฉันยอมรับ <a href="#" class="text-decoration-none">เงื่อนไขการสั่งซื้อ</a> 
-                            และ <a href="#" class="text-decoration-none">นโยบายการคืนเงิน</a>
-                        </label>
-                    </div>
-                </div>
-            </form>
+        <div class="mb-3">
+            <label>เบอร์โทรศัพท์ *</label>
+            <input type="tel" name="customer_phone" class="form-control" required>
         </div>
 
-        <!-- Order Summary -->
-        <div class="col-lg-4">
-            <div class="order-summary">
-                <h4 class="mb-4">
-                    <i class="fas fa-receipt text-primary me-2"></i>
-                    สรุปคำสั่งซื้อ
-                </h4>
+        <!-- วิธีการรับสินค้า -->
+        <div class="mb-3">
+            <label>วิธีการรับสินค้า *</label>
+            <select class="form-select" name="delivery_method" required>
+                <option value="delivery">จัดส่งถึงบ้าน</option>
+                <option value="pickup">รับที่ร้าน</option>
+            </select>
+        </div>
 
-                {% for cart_key, item in cart_items.items() %}
-                <div class="order-item">
-                    <div class="item-details">
-                        <div class="item-name">{{ item.name }}</div>
-                        {% if item.options %}
-                            <div class="item-options">
-                                <i class="fas fa-cog me-1"></i>{{ item.options }}
-                            </div>
-                        {% endif %}
-                        <div class="item-quantity-price">
-                            {{ item.quantity }} × {{ "%.0f"|format(item.price) }} บาท
-                        </div>
-                    </div>
-                    <div class="item-total">{{ "%.0f"|format(item.price * item.quantity) }} บาท</div>
-                </div>
+        <!-- ที่อยู่ (select จาก addresses) -->
+        <div class="mb-3" id="address-section">
+            <label>ที่อยู่จัดส่ง *</label>
+            <select class="form-select" name="customer_address">
+                {% for addr in addresses %}
+                <option value="{{ addr.id }}">{{ addr.full_address }}</option>
                 {% endfor %}
-
-                <div class="order-item">
-                    <div class="item-details">
-                        <strong>ค่าจัดส่ง:</strong>
-                    </div>
-                    <div class="item-total text-success">ฟรี</div>
-                </div>
-
-                <div class="order-item">
-                    <div class="item-details">
-                        <strong>รวมทั้งหมด:</strong>
-                    </div>
-                    <div class="item-total">{{ "%.0f"|format(total_price) }} บาท</div>
-                </div>
-
-                <button type="submit" form="checkout-form" class="place-order-btn">
-                    <i class="fas fa-shopping-cart me-2"></i>
-                    สั่งซื้อเลย
-                </button>
-
-                <div class="security-info">
-                    <small class="text-muted">
-                        <i class="fas fa-shield-alt text-success me-2"></i>
-                        ข้อมูลของคุณมีความปลอดภัย<br>
-                        ด้วยระบบการเข้ารหัส SSL
-                    </small>
-                </div>
-
-                <!-- Contact Info -->
-                <div class="mt-4 p-3 bg-light rounded">
-                    <h6 class="text-primary mb-2">
-                        <i class="fas fa-headset me-2"></i>ต้องการความช่วยเหลือ?
-                    </h6>
-                    <p class="small mb-2">
-                        <i class="fas fa-phone text-success me-2"></i>
-                        <a href="tel:0891234567" class="text-decoration-none">089-123-4567</a>
-                    </p>
-                    <p class="small mb-0">
-                        <i class="fas fa-clock text-info me-2"></i>
-                        เปิดให้บริการทุกวัน 07:00-20:00
-                    </p>
-                </div>
-            </div>
+            </select>
         </div>
-    </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
+        <!-- Payment Method -->
+        <div class="mb-3">
+            <label>วิธีชำระเงิน *</label>
+            <select class="form-select" name="payment_method" required>
+                <option value="cod">เก็บเงินปลายทาง (COD)</option>
+                <option value="promptpay">PromptPay</option>
+            </select>
+        </div>
+
+        <!-- หมายเหตุ -->
+        <div class="mb-3">
+            <label>หมายเหตุเพิ่มเติม</label>
+            <textarea name="notes" class="form-control"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">สั่งซื้อเลย</button>
+    </form>
+</div>
+
 <script>
-$(document).ready(function() {
-    // Handle delivery method selection
-    $('.delivery-option').click(function() {
-        $('.delivery-option').removeClass('selected');
-        $(this).addClass('selected');
-        
-        const method = $(this).data('method');
-        if (method === 'delivery') {
-            $('#delivery-address').show().find('textarea').prop('required', true);
+    // ซ่อนที่อยู่ถ้าเลือก pickup
+    const deliverySelect = document.querySelector('select[name="delivery_method"]');
+    const addressSection = document.getElementById('address-section');
+
+    deliverySelect.addEventListener('change', function() {
+        if (this.value === 'pickup') {
+            addressSection.style.display = 'none';
+            addressSection.querySelector('select').required = false;
         } else {
-            $('#delivery-address').hide().find('textarea').prop('required', false);
+            addressSection.style.display = 'block';
+            addressSection.querySelector('select').required = true;
         }
     });
-    
-    // Handle payment method selection
-    $('.payment-method').click(function() {
-        $('.payment-method').removeClass('selected');
-        $(this).addClass('selected');
-        
-        const method = $(this).data('method');
-        // Here you can show/hide payment-specific fields
-        console.log('Selected payment method:', method);
-    });
-    
-    // Phone number formatting
-    $('#customer_phone').on('input', function() {
-        let value = $(this).val().replace(/\D/g, '');
-        if (value.length > 0) {
-            if (value.length <= 3) {
-                value = value;
-            } else if (value.length <= 6) {
-                value = value.substring(0, 3) + '-' + value.substring(3);
-            } else if (value.length <= 10) {
-                value = value.substring(0, 3) + '-' + value.substring(3, 6) + '-' + value.substring(6);
-            } else {
-                value = value.substring(0, 3) + '-' + value.substring(3, 6) + '-' + value.substring(6, 10);
-            }
-        }
-        $(this).val(value);
-    });
-    
-    // Form validation and submission
-    $('#checkout-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Validate required fields
-        let isValid = true;
-        const requiredFields = ['customer_name', 'customer_phone'];
-        
-        // Check if delivery is selected and address is required
-        if ($('.delivery-option.selected').data('method') === 'delivery') {
-            requiredFields.push('customer_address');
-        }
-        
-        requiredFields.forEach(fieldName => {
-            const field = $(`[name="${fieldName}"]`);
-            if (!field.val().trim()) {
-                field.addClass('is-invalid');
-                isValid = false;
-            } else {
-                field.removeClass('is-invalid').addClass('is-valid');
-            }
-        });
-        
-        // Validate phone number
-        const phone = $('#customer_phone').val().replace(/[-\s]/g, '');
-        if (phone && !/^[0-9]{9,10}$/.test(phone)) {
-            $('#customer_phone').addClass('is-invalid');
-            isValid = false;
-        }
-        
-        // Check terms acceptance
-        if (!$('#accept_terms').is(':checked')) {
-            showToast('กรุณายอมรับเงื่อนไขการสั่งซื้อ', 'warning');
-            isValid = false;
-        }
-        
-        if (!isValid) {
-            showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'warning');
-            return;
-        }
-        
-        // Show loading
-        const submitBtn = $('.place-order-btn');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>กำลังดำเนินการ...');
-        
-        // Prepare form data
-        const formData = {
-            customer_name: $('#customer_name').val(),
-            customer_phone: $('#customer_phone').val(),
-            customer_address: $('#customer_address').val(),
-            notes: $('#notes').val(),
-            delivery_method: $('.delivery-option.selected').data('method'),
-            payment_method: $('.payment-method.selected').data('method')
-        };
-        
-        // Submit the actual form (this will use Flask's form handling)
-        setTimeout(() => {
-            this.submit();
-        }, 500);
-    });
-    
-    // Show toast notification
-    function showToast(message, type = 'info') {
-        // Create toast if not exists
-        if (!$('#toast').length) {
-            $('body').append(`
-                <div class="toast-container position-fixed bottom-0 end-0 p-3">
-                    <div id="toast" class="toast align-items-center border-0" role="alert">
-                        <div class="d-flex">
-                            <div class="toast-body"></div>
-                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
-                        </div>
-                    </div>
-                </div>
-            `);
-        }
-        
-        const toast = $('#toast');
-        const toastBody = toast.find('.toast-body');
-        
-        // Set message and type
-        toastBody.text(message);
-        
-        // Remove existing type classes
-        toast.removeClass('bg-success bg-danger bg-warning bg-info text-white text-dark');
-        
-        // Add appropriate class
-        switch(type) {
-            case 'success':
-                toast.addClass('bg-success text-white');
-                break;
-            case 'error':
-                toast.addClass('bg-danger text-white');
-                break;
-            case 'warning':
-                toast.addClass('bg-warning text-dark');
-                break;
-            default:
-                toast.addClass('bg-info text-white');
-        }
-        
-        // Show toast
-        const bsToast = new bootstrap.Toast(toast[0], {
-            autohide: true,
-            delay: 4000
-        });
-        
-        bsToast.show();
-    }
-    
-    // Auto-fill user data if logged in
-    {% if session.get('user_id') %}
-    console.log('User logged in, pre-filling available data');
-    {% endif %}
-    
-    // Initialize on page load
-    $('.delivery-option.selected').trigger('click');
-});
 </script>
 {% endblock %}

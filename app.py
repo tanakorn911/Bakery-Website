@@ -3,7 +3,7 @@ import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
-
+from functools import wraps
 app = Flask(__name__)
 app.secret_key = "sweetdreams_bakery_secret_2024"
 DB_NAME = "bakery.db"
@@ -87,8 +87,56 @@ def init_db():
         FOREIGN KEY (product_id) REFERENCES products (id)
     )
     """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    payment_method TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    status TEXT DEFAULT 'unpaid',
+    paid_at TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS order_status_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS addresses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        recipient_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        address TEXT NOT NULL,
+        city TEXT,
+        province TEXT,
+        postal_code TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
     conn.commit()
     conn.close()
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_id'):
+            flash('กรุณาเข้าสู่ระบบก่อนสั่งซื้อ')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def seed_categories():
     """เพิ่มหมวดหมู่เริ่มต้น"""
@@ -261,7 +309,7 @@ def get_product_by_id(product_id):
 def get_cart_total():
     cart = session.get('cart', {})
     total_items = sum(item['quantity'] for item in cart.values())
-    total_price = sum(item['price'] * item['quantity'] for item in cart.values())
+    total_price = sum(item['quantity'] * item['price'] for item in cart.values())
     return total_items, total_price
 
 # ========================
@@ -477,32 +525,54 @@ def clear_cart():
 # ========================
 
 @app.route("/checkout", methods=["GET", "POST"])
+@login_required
 def checkout():
     cart = session.get('cart', {})
     if not cart:
         flash('ตะกร้าสินค้าว่าง')
         return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    addresses = conn.execute("""
+        SELECT id,
+               recipient_name || ', ' || address || 
+               CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
+               CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
+               CASE WHEN country IS NOT NULL THEN ', ' || country ELSE '' END
+               AS full_address
+        FROM addresses
+        WHERE user_id = ?
+    """, (session['user_id'],)).fetchall()
+    conn.close()
+
+    total_items, total_price = get_cart_total()
+
     if request.method == 'POST':
         customer_name = request.form['customer_name']
         customer_phone = request.form['customer_phone']
-        customer_address = request.form.get('customer_address', '')
+        customer_address_id = request.form.get('customer_address')
         notes = request.form.get('notes', '')
-        total_items, total_price = get_cart_total()
+
+        # ดึงที่อยู่จริงจาก id
         conn = get_db_connection()
+        address_row = conn.execute("SELECT * FROM addresses WHERE id = ?", (customer_address_id,)).fetchone()
+        customer_address = f"{address_row['recipient_name']}, {address_row['address']}, {address_row['city'] or ''}, {address_row['postal_code'] or ''}, {address_row['country'] or ''}"
+
         try:
             cursor = conn.execute("""
                 INSERT INTO orders 
                 (user_id, total_amount, customer_name, customer_phone, customer_address, notes, status)
                 VALUES (?, ?, ?, ?, ?, ?, 'pending')
-            """, (session.get('user_id'), total_price, customer_name, customer_phone, customer_address, notes))
+            """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes))
             order_id = cursor.lastrowid
+
             for item in cart.values():
                 conn.execute("""
                     INSERT INTO order_items 
                     (order_id, product_id, quantity, unit_price, total_price, options)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (order_id, item['id'], item['quantity'], item['price'], 
-                     item['price'] * item['quantity'], item.get('options', '')))
+                """, (order_id, item['id'], item['quantity'], item['price'], item['price'] * item['quantity'], item.get('options', '')))
+
             conn.commit()
             session['cart'] = {}
             flash(f'ขอบคุณสำหรับคำสั่งซื้อ! หมายเลขคำสั่งซื้อ: #{order_id}')
@@ -512,11 +582,13 @@ def checkout():
             flash(f'เกิดข้อผิดพลาด: {str(e)}')
         finally:
             conn.close()
-    total_items, total_price = get_cart_total()
+
     return render_template('checkout.html',
-                         cart_items=cart,
-                         total_items=total_items,
-                         total_price=total_price)
+                           cart_items=cart,
+                           total_items=total_items,
+                           total_price=total_price,
+                           addresses=addresses)
+
 
 # ========================
 # User Profile Routes
@@ -539,89 +611,117 @@ def profile():
     conn.close()
     return render_template('profile.html', user=user, orders=orders)
 
-@app.route('/update_profile', methods=['POST'])
+@app.route("/update_profile", methods=["POST"])
 def update_profile():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    full_name = request.form['full_name']
-    phone = request.form['phone']
-    address = request.form['address']
-    conn = get_db_connection()
-    try:
-        conn.execute("""
-            UPDATE users SET full_name = ?, phone = ?, address = ?
-            WHERE id = ?
-        """, (full_name, phone, address, session.get('user_id')))
-        conn.commit()
-        session['full_name'] = full_name
-        flash('อัปเดตข้อมูลเรียบร้อยแล้ว')
-    except Exception as e:
-        flash(f'เกิดข้อผิดพลาด: {str(e)}')
-    finally:
-        conn.close()
-    return redirect(url_for('profile'))
+    if "user_id" not in session:
+        flash("กรุณาเข้าสู่ระบบก่อน")
+        return redirect(url_for("login"))
 
-@app.route('/change_password', methods=['POST'])
-def change_password():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    current_password = request.form['current_password']
-    new_password = request.form['new_password']
-    confirm_password = request.form['confirm_password']
-    if new_password != confirm_password:
-        flash('รหัสผ่านใหม่ไม่ตรงกัน')
-        return redirect(url_for('profile'))
+    user_id = session["user_id"]
+    full_name = request.form.get("full_name", "")
+    phone = request.form.get("phone", "")
+    address = request.form.get("address", "")
+    birthday = request.form.get("birthday", "")
+
     conn = get_db_connection()
-    user = conn.execute(
-        "SELECT password FROM users WHERE id = ?", (session.get('user_id'),)
-    ).fetchone()
-    if not check_password_hash(user['password'], current_password):
-        flash('รหัสผ่านเดิมไม่ถูกต้อง')
-        conn.close()
-        return redirect(url_for('profile'))
     try:
-        hashed_password = generate_password_hash(new_password)
         conn.execute("""
-            UPDATE users SET password = ? WHERE id = ?
-        """, (hashed_password, session.get('user_id')))
+            UPDATE users
+            SET full_name = ?, phone = ?, address = ?, birthday = ?
+            WHERE id = ?
+        """, (full_name, phone, address, birthday, user_id))
         conn.commit()
-        flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว')
+        flash("อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว")
     except Exception as e:
-        flash(f'เกิดข้อผิดพลาด: {str(e)}')
+        conn.rollback()
+        flash(f"เกิดข้อผิดพลาด: {str(e)}")
     finally:
         conn.close()
-    return redirect(url_for('profile'))
+
+    return redirect(url_for("profile"))
+
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+
+@app.route("/change_password", methods=["GET", "POST"])
+def change_password():
+    # ตรวจสอบล็อกอิน
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อน")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    if not user:
+        flash("ไม่พบผู้ใช้นี้")
+        conn.close()
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        current_password = request.form["current_password"]
+        new_password = request.form["new_password"]
+        confirm_password = request.form["confirm_password"]
+
+        # ตรวจสอบรหัสผ่านเก่า
+        if not check_password_hash(user["password"], current_password):
+            flash("รหัสผ่านเก่าไม่ถูกต้อง")
+            return redirect(url_for("change_password"))
+
+        # ตรวจสอบรหัสผ่านใหม่ตรงกัน
+        if new_password != confirm_password:
+            flash("รหัสผ่านใหม่ไม่ตรงกัน")
+            return redirect(url_for("change_password"))
+
+        # อัปเดตรหัสผ่านใหม่ใน DB
+        hashed_password = generate_password_hash(new_password)
+        conn.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
+        conn.commit()
+        conn.close()
+
+        flash("เปลี่ยนรหัสผ่านเรียบร้อยแล้ว")
+        return redirect(url_for("profile"))
+
+    conn.close()
+    return render_template("change_password.html")
+
 
 # ========================
 # Order Routes
 # ========================
 
-@app.route('/order/<int:order_id>')
+@app.route("/order/<int:order_id>")
 def order_detail(order_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อน")
+        return redirect(url_for('login'))
+
     conn = get_db_connection()
-    if session.get('role') == 'admin':
-        order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
-    elif session.get('user_id'):
+    try:
+        # ดึงคำสั่งซื้อ
         order = conn.execute("""
             SELECT * FROM orders 
             WHERE id = ? AND user_id = ?
-        """, (order_id, session.get('user_id'))).fetchone()
-    else:
-        flash('กรุณาเข้าสู่ระบบก่อน')
+        """, (order_id, user_id)).fetchone()
+
+        if not order:
+            flash("ไม่พบคำสั่งซื้อนี้")
+            return redirect(url_for('profile'))
+
+        # ดึงรายการสินค้า
+        items = conn.execute("""
+            SELECT oi.*, p.name, p.image 
+            FROM order_items oi 
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        """, (order_id,)).fetchall()
+
+    finally:
         conn.close()
-        return redirect(url_for('login'))
-    if not order:
-        flash('ไม่พบคำสั่งซื้อนี้')
-        conn.close()
-        return redirect(url_for('profile'))
-    order_items = conn.execute("""
-        SELECT oi.*, p.name as product_name, p.image as product_image
-        FROM order_items oi
-        JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = ?
-    """, (order_id,)).fetchall()
-    conn.close()
-    return render_template('order_detail.html', order=order, order_items=order_items)
+
+    return render_template("order_detail.html", order=order, items=items)
 
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
 def cancel_order(order_id):
@@ -831,20 +931,18 @@ def update_order_status(order_id):
 
     conn = get_db_connection()
     try:
-
         order = conn.execute("SELECT id FROM orders WHERE id = ?", (order_id,)).fetchone()
         if not order:
+            conn.close()
             return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
 
         conn.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
         conn.commit()
         return jsonify({
             'success': True,
-            'message': 'อัปเดตสถานะเรียบร้อยแล้ว',
-            'new_status': new_status
+            'message': f'อัปเดตสถานะคำสั่งซื้อ #{order_id} เป็น {new_status} แล้ว'
         })
     except Exception as e:
-        conn.rollback()
         return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
     finally:
         conn.close()
@@ -941,6 +1039,127 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return render_template('500.html'), 500
+
+@app.route("/order_history")
+def order_history():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login")) 
+
+    conn = get_db_connection()
+    orders = conn.execute("""
+        SELECT * FROM orders 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC
+    """, (user_id,)).fetchall()
+    conn.close()
+
+    return render_template("order_history.html", orders=orders)
+    
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='%d/%m/%Y %H:%M'):
+    try:
+        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        return dt.strftime(format)
+    except:
+        return value
+
+@app.route("/address_book")
+def address_book():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อนใช้งาน")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    addresses = conn.execute(
+        "SELECT * FROM addresses WHERE user_id = ?", (user_id,)
+    ).fetchall()
+    conn.close()
+    return render_template("address_book.html", addresses=addresses)
+
+
+@app.route("/address_book/add", methods=["GET", "POST"])
+def add_address():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อนใช้งาน")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        recipient_name = request.form["recipient_name"]
+        phone = request.form["phone"]
+        address = request.form["address"]
+        city = request.form.get("city", "")
+        postal_code = request.form.get("postal_code", "")
+        province = request.form.get("province", "")
+
+        conn = get_db_connection()
+        conn.execute("""
+            UPDATE addresses
+            SET recipient_name = ?, phone = ?, address = ?, city = ?, postal_code = ?, province  = ?
+            WHERE id = ? AND user_id = ?
+        """, (recipient_name, phone, address, city, postal_code, province , user_id))
+
+        conn.commit()
+        conn.close()
+
+        flash("เพิ่มที่อยู่เรียบร้อยแล้ว")
+        return redirect(url_for("address_book"))
+
+    return render_template("address_form.html", action="เพิ่มที่อยู่ใหม่", address=None)
+
+
+@app.route("/address/<int:address_id>/edit", methods=["GET", "POST"])
+def edit_address(address_id):
+    user_id = session.get('user_id')
+    conn = get_db_connection()
+    address = conn.execute("SELECT * FROM addresses WHERE id = ? AND user_id = ?", 
+                           (address_id, user_id)).fetchone()
+
+    if not address:
+        flash("ไม่พบที่อยู่")
+        return redirect(url_for("address_book"))
+
+    if request.method == "POST":
+        recipient_name = request.form["recipient_name"]
+        phone = request.form["phone"]
+        address = request.form["address"]
+        city = request.form.get("city", "")
+        postal_code = request.form.get("postal_code", "")
+        province = request.form.get("province", "")
+
+        conn = get_db_connection()
+        conn.execute("""
+            UPDATE addresses
+            SET recipient_name = ?, phone = ?, address = ?, city = ?, postal_code = ?, province = ?
+            WHERE id = ? AND user_id = ?
+        """, (recipient_name, phone, address, city, postal_code, province, address_id, user_id))
+        conn.commit()
+        conn.close()
+
+        flash("แก้ไขที่อยู่เรียบร้อยแล้ว")
+        return redirect(url_for("address_book"))
+
+    conn.close()
+    return render_template("address_form.html", action="บันทึก", address=address)
+
+@app.route("/address_book/delete/<int:address_id>", methods=["POST"])
+def delete_address(address_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อนใช้งาน")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    conn.execute(
+        "DELETE FROM addresses WHERE id=? AND user_id=?", (address_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+    flash("ลบที่อยู่เรียบร้อยแล้ว")
+    return redirect(url_for("address_book"))
 
 # ========================
 # Initialize Application

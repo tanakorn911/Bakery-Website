@@ -19,16 +19,16 @@
             </div>
             
             <div class="list-group mt-3">
-                <a href="#profile-info" class="list-group-item list-group-item-action active" data-tab="profile-info">
+                <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action active" data-tab="profile-info">
                     <i class="fas fa-user me-2"></i>ข้อมูลส่วนตัว
                 </a>
-                <a href="#order-history" class="list-group-item list-group-item-action" data-tab="order-history">
+                <a href="{{ url_for('order_history') }}" class="list-group-item list-group-item-action" data-tab="order-history">
                     <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อ
                 </a>
-                <a href="#address-book" class="list-group-item list-group-item-action" data-tab="address-book">
+                <a href="{{ url_for('address_book') }}" class="list-group-item list-group-item-action" data-tab="address-book">
                     <i class="fas fa-address-book me-2"></i>ที่อยู่จัดส่ง
                 </a>
-                <a href="#change-password" class="list-group-item list-group-item-action" data-tab="change-password">
+                <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action" data-tab="change-password">
                     <i class="fas fa-lock me-2"></i>เปลี่ยนรหัสผ่าน
                 </a>
             </div>
@@ -67,14 +67,15 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">วันเกิด</label>
-                                    <input type="date" class="form-control" name="birthday">
+                                    <input type="date" class="form-control" name="birthday"
+                                    value="{{ user.birthday or '' }}">
                                 </div>
                             </div>
                             
-                            <div class="mb-3">
+                            <!-- <div class="mb-3">
                                 <label class="form-label">ที่อยู่</label>
                                 <textarea class="form-control" name="address" rows="3">{{ user.address or '' }}</textarea>
-                            </div>
+                            </div> -->
                             
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>บันทึกข้อมูล

@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <h2>{{ action }} ที่อยู่</h2>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="recipient_name">ชื่อผู้รับ</label>
+            <input type="text" class="form-control" id="recipient_name" name="recipient_name" 
+                   value="{{ address['recipient_name'] if address else '' }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="phone">เบอร์โทร</label>
+            <input type="text" class="form-control" id="phone" name="phone" 
+                   value="{{ address['phone'] if address else '' }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="address">ที่อยู่</label>
+            <textarea class="form-control" id="address" name="address" rows="2" required>{{ address['address'] if address else '' }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="city">อำเภอ</label>
+            <input type="text" class="form-control" id="city" name="city" 
+                   value="{{ address['city'] if address else '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="province">จังหวัด</label>
+            <input type="text" class="form-control" id="province" name="province" 
+                   value="{{ address['province'] if address else '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="postal_code">รหัสไปรษณีย์</label>
+            <input type="text" class="form-control" id="postal_code" name="postal_code" 
+                   value="{{ address['postal_code'] if address else '' }}">
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ action }}</button>
+        <a href="{{ url_for('address_book') }}" class="btn btn-secondary ms-2">ยกเลิก</a>
+    </form>
+</div>
+{% endblock %}

@@ -688,6 +688,21 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+/** Cancel item from order detail
+ */
+function cancelItem(itemId) {
+    if(confirm("คุณต้องการยกเลิกรายการนี้หรือไม่?")) {
+        $.post(`/cancel_item/${itemId}`, function(response){
+            if(response.success){
+                alert("ยกเลิกรายการเรียบร้อยแล้ว");
+                location.reload();
+            } else {
+                alert(response.message);
+            }
+        });
+    }
+}
+
 /**
  * Export functions for global use
  */

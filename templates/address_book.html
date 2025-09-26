@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container py-5">
+    <h2>Address Book</h2>
+    <a href="{{ url_for('add_address') }}" class="btn btn-primary mb-3">เพิ่มที่อยู่ใหม่</a>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ชื่อผู้รับ</th>
+                <th>โทรศัพท์</th>
+                <th>ที่อยู่</th>
+                <th>อำเภอ</th>
+                <th>จังหวัด</th>
+                <th>รหัสไปรษณีย์</th>
+                <th>จัดการ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for addr in addresses %}
+            <tr>
+                <td>{{ addr.recipient_name }}</td>
+                <td>{{ addr.phone }}</td>
+                <td>{{ addr.address }}</td>
+                <td>{{ addr.city }}</td>
+                <td>{{ addr.province }}</td>
+                <td>{{ addr.postal_code }}</td>
+                <td>
+                    <a href="{{ url_for('edit_address', address_id=addr.id) }}" class="btn btn-sm btn-warning">แก้ไข</a>
+                    <form action="{{ url_for('delete_address', address_id=addr.id) }}" method="POST" style="display:inline-block;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('คุณต้องการลบที่อยู่นี้หรือไม่?')">ลบ</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7">ยังไม่มีที่อยู่</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+{% block title %}สมุดที่อยู่ - Sweet Dreams Bakery{% endblock %}

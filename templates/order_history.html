@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block title %}ประวัติคำสั่งซื้อ{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">ประวัติคำสั่งซื้อของคุณ</h2>
+
+    {% if orders %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>หมายเลขคำสั่งซื้อ</th>
+                <th>จำนวนเงิน (บาท)</th>
+                <th>วันที่สั่งซื้อ</th>
+                <th>สถานะ</th>
+                <th>รายละเอียด</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.id }}</td>
+                <td>{{ "%.2f"|format(order.total_amount) }}</td>
+                <td>{{ order.created_at | datetimeformat }}</td>
+                <td>{{ order.status }}</td>
+                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">ดู</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>คุณยังไม่มีคำสั่งซื้อ</p>
+    {% endif %}
+</div>
+{% endblock %}
