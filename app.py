@@ -527,37 +527,48 @@ def add_to_cart():
 @app.route('/update_cart', methods=['POST'])
 def update_cart():
     data = request.get_json()
-    cart_key = data.get('cart_key')
+    product_id = str(data.get('cart_key'))
     quantity = int(data.get('quantity', 1))
+
     cart = session.get('cart', {})
-    if cart_key in cart:
-        if quantity <= 0:
-            del cart[cart_key]
-        else:
-            cart[cart_key]['quantity'] = quantity
-    session['cart'] = cart
-    total_items, total_price = get_cart_total()
-    return jsonify({
-        'success': True,
-        'total_items': total_items,
-        'total_price': total_price
-    })
+
+    if product_id in cart:
+        cart[product_id]['quantity'] = quantity
+        session['cart'] = cart
+
+        total_items = sum(item['quantity'] for item in cart.values())
+        total_price = sum(item['price'] * item['quantity'] for item in cart.values())
+
+        return jsonify({
+            'success': True,
+            'total_items': total_items,
+            'total_price': total_price
+        })
+
+    return jsonify({'success': False, 'message': 'ไม่พบสินค้า'})
 
 @app.route('/remove_from_cart', methods=['POST'])
 def remove_from_cart():
     data = request.get_json()
-    cart_key = data.get('cart_key')
+    product_id = str(data.get('cart_key'))
+
     cart = session.get('cart', {})
-    if cart_key in cart:
-        del cart[cart_key]
-    session['cart'] = cart
-    total_items, total_price = get_cart_total()
-    return jsonify({
-        'success': True,
-        'message': 'ลบสินค้าออกจากตะกร้าแล้ว',
-        'total_items': total_items,
-        'total_price': total_price
-    })
+
+    if product_id in cart:
+        del cart[product_id]
+        session['cart'] = cart
+
+        total_items = sum(item['quantity'] for item in cart.values())
+        total_price = sum(item['price'] * item['quantity'] for item in cart.values())
+
+        return jsonify({
+            'success': True,
+            'total_items': total_items,
+            'total_price': total_price
+        })
+
+    return jsonify({'success': False, 'message': 'ไม่พบสินค้า'})
+
 
 @app.route('/clear_cart', methods=['POST'])
 def clear_cart():
@@ -615,12 +626,25 @@ def checkout():
             """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes))
             order_id = cursor.lastrowid
 
+            # เพิ่ม order_items และลด stock
             for item in cart.values():
+                # เพิ่ม order_items
                 conn.execute("""
                     INSERT INTO order_items 
                     (order_id, product_id, quantity, unit_price, total_price, options)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (order_id, item['id'], item['quantity'], item['price'], item['price'] * item['quantity'], item.get('options', '')))
+
+                # ลด stock ของสินค้า
+                conn.execute("""
+                    UPDATE products
+                    SET stock_quantity = stock_quantity - ?
+                    WHERE id = ? AND stock_quantity >= ?
+                """, (item['quantity'], item['id'], item['quantity']))
+
+                # ตรวจสอบ stock เพียงพอ
+                if conn.total_changes == 0:
+                    raise Exception(f"สินค้ารหัส {item['id']} มีไม่เพียงพอ")
 
             conn.commit()
             session['cart'] = {}
@@ -773,25 +797,46 @@ def order_detail(order_id):
     return render_template("order_detail.html", order=order, items=items)
 
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
+@login_required
 def cancel_order(order_id):
     if not session.get('user_id'):
         return jsonify({'success': False, 'message': 'กรุณาเข้าสู่ระบบ'})
+
     conn = get_db_connection()
     order = conn.execute("""
         SELECT * FROM orders 
         WHERE id = ? AND user_id = ? AND status = 'pending'
     """, (order_id, session.get('user_id'))).fetchone()
+
     if not order:
         conn.close()
         return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อหรือไม่สามารถยกเลิกได้'})
+
     try:
+        # ดึงรายการสินค้า
+        items = conn.execute("""
+            SELECT product_id, quantity FROM order_items WHERE order_id = ?
+        """, (order_id,)).fetchall()
+
+        # คืน stock
+        for item in items:
+            conn.execute("""
+                UPDATE products
+                SET stock_quantity = stock_quantity + ?
+                WHERE id = ?
+            """, (item['quantity'], item['product_id']))
+
+        # เปลี่ยน status เป็น cancelled
         conn.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order_id,))
         conn.commit()
         conn.close()
-        return jsonify({'success': True, 'message': 'ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว'})
+
+        return jsonify({'success': True, 'message': 'ยกเลิกคำสั่งซื้อเรียบร้อยแล้ว และคืนจำนวนสินค้าแล้ว'})
     except Exception as e:
+        conn.rollback()
         conn.close()
         return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
+
 
 @app.route('/reorder/<int:order_id>', methods=['POST'])
 def reorder(order_id):
@@ -1146,11 +1191,10 @@ def add_address():
 
         conn = get_db_connection()
         conn.execute("""
-            UPDATE addresses
-            SET recipient_name = ?, phone = ?, address = ?, city = ?, postal_code = ?, province  = ?
-            WHERE id = ? AND user_id = ?
-        """, (recipient_name, phone, address, city, postal_code, province , user_id))
-
+            INSERT INTO addresses (user_id, recipient_name, phone, address, city, postal_code, province)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, recipient_name, phone, address, city, postal_code, province))
+                    
         conn.commit()
         conn.close()
 

@@ -5,7 +5,7 @@
 <div class="container py-5">
     <h4>คำสั่งซื้อ #{{ order.id }}</h4>
     <p>วันที่: {{ order.created_at }} | สถานะ: 
-        <span class="badge bg-{{ 'success' if order.status=='completed' else 'warning' }}">{{ order.status }}</span>
+        <span id="order-status" class="badge bg-{{ 'success' if order.status=='completed' else 'warning' }}">{{ order.status }}</span>
     </p>
 
     <h5 class="mt-4">ข้อมูลผู้รับ</h5>
@@ -33,11 +33,6 @@
                 <td>{{ "%.2f"|format(item.unit_price) }} บาท</td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ "%.2f"|format(item.total_price) }} บาท</td>
-                <td>
-                    {% if order.status == 'pending' %}
-                    <button class="btn btn-sm btn-outline-danger" onclick="cancelItem({{ item.id }})">ยกเลิก</button>
-                    {% endif %}
-                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -49,10 +44,45 @@
         </tfoot>
     </table>
 
+    {% if order.status == 'pending' %}
+    <div class="d-flex justify-content-end mt-3">
+        <form id="cancel-all-form" action="{{ url_for('cancel_order', order_id=order.id) }}">
+            <button type="submit" class="btn btn-danger btn-sm">
+                <i class="fas fa-trash-alt me-1"></i>ยกเลิกคำสั่งซื้อ
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
     <a href="{{ url_for('order_history') }}" class="btn btn-secondary mt-3">กลับ</a>
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.getElementById('cancel-all-form')?.addEventListener('submit', function(e) {
+    e.preventDefault(); // ป้องกัน form submit ปกติ
+
+    if(!confirm('คุณแน่ใจว่าจะยกเลิกคำสั่งซื้อทั้งหมด?')) return;
+
+    fetch(this.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: {{ order.id }} }),
+        credentials: 'same-origin'
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message); // แสดงข้อความตอบกลับ
+        if(data.success){
+            // อัปเดต badge สถานะทันที
+            const badge = document.getElementById('order-status');
+            badge.textContent = 'cancelled';
+            badge.className = 'badge bg-danger';
+            // ซ่อนปุ่มยกเลิก
+            document.getElementById('cancel-all-form').style.display = 'none';
+        }
+    })
+    .catch(err => alert('เกิดข้อผิดพลาด: ' + err));
+});
+</script>
 
 {% endblock %}
-

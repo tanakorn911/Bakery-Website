@@ -690,18 +690,24 @@ if ('serviceWorker' in navigator) {
 
 /** Cancel item from order detail
  */
-function cancelItem(itemId) {
-    if(confirm("คุณต้องการยกเลิกรายการนี้หรือไม่?")) {
-        $.post(`/cancel_item/${itemId}`, function(response){
-            if(response.success){
-                alert("ยกเลิกรายการเรียบร้อยแล้ว");
-                location.reload();
-            } else {
-                alert(response.message);
-            }
-        });
-    }
+function cancelOrder(orderId) {
+    fetch(`/cancel_order/${orderId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(() => alert("เกิดข้อผิดพลาด"));
 }
+
+
 
 /**
  * Export functions for global use
@@ -717,3 +723,62 @@ window.BakeryApp = {
     validateThaiPhone,
     getThaiDate
 };
+
+$(document).ready(function() {
+    // กดปุ่มเพิ่มสินค้า
+    $('.add-to-cart').on('click', function() {
+        const btn = $(this);
+        const data = {
+            product_id: btn.data('id'),
+            name: btn.data('name'),
+            price: btn.data('price'),
+            image: btn.data('image')
+        };
+
+        $.ajax({
+            url: '/add_to_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res) {
+                if (res.success) {
+                    $('#cart-badge').text(res.total_items).show();
+                }
+            }
+        });
+    });
+});
+
+$(document).ready(function() {
+    // Smooth scroll for hero CTA button
+    $('.hero-cta a[href^="#"]').on('click', function(e) {
+        e.preventDefault();
+        const target = $($(this).attr('href'));
+        if (target.length) {
+            $('html, body').animate({
+                scrollTop: target.offset().top - 100
+            }, 1000);
+        }
+    });
+
+    // Add staggered animation to products
+    $('.product-card').each(function(index) {
+        $(this).css('animation-delay', (index * 0.1) + 's');
+    });
+
+    // Update active navigation
+    $(window).scroll(function() {
+        let current = '';
+        $('section[id]').each(function() {
+            const sectionTop = $(this).offset().top;
+            const sectionHeight = $(this).outerHeight();
+            if ($(window).scrollTop() >= sectionTop - 200) {
+                current = $(this).attr('id');
+            }
+        });
+        $('.nav-link').removeClass('active');
+        if (current) {
+            $(`.nav-link[href="#${current}"]`).addClass('active');
+        }
+    });
+});
