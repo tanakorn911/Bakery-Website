@@ -47,6 +47,7 @@
 
     <div class="row mb-2">
         <div class="col-6">
+
             <strong>ลูกค้า:</strong> {{ order.customer_name | default('-') }}<br>
             <strong>เบอร์โทร:</strong> {{ order.customer_phone | default('-') }}<br>
             <strong>ที่อยู่:</strong> {{ addr.full_address | default('-') }}
@@ -62,6 +63,7 @@
     <table class="table table-bordered">
         <thead class="table-light">
             <tr>
+                <th class="text-center">ลำดับ</th>
                 <th>สินค้า</th>
                 <th class="text-center">จำนวน</th>
                 <th class="text-end">ราคา/หน่วย</th>
@@ -71,6 +73,7 @@
         <tbody>
             {% for item in items %}
             <tr>
+                <td class="text-center">{{ loop.index }}</td>
                 <td>{{ item.product_name | default('-') }}</td>
                 <td class="text-center">{{ item.quantity | default(0) }}</td>
                 <td class="text-end">{{ "{:,.0f}".format(item.unit_price | default(item.price) | default(0)) }} ฿</td>

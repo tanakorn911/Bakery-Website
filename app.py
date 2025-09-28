@@ -1018,6 +1018,7 @@ def admin_orders():
             })
 
         order['items'] = items
+        order['item_count'] = len(items)
         # คำนวณยอดรวมทั้งหมด
         order['total_amount'] = sum(i['total'] for i in items)
 

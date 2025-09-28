@@ -4,26 +4,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
-<style>
-    .products-table td, .products-table th {
-        vertical-align: middle;
-    }
-    .status-badge {
-        padding: 0.35em 0.7em;
-        border-radius: 0.35rem;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-    @media (max-width: 768px) {
-        .products-table td:nth-child(4),
-        .products-table td:nth-child(6) {
-            display: none;
-        }
-    }
-    .loading-row {
-        opacity: 0.6;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
