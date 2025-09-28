@@ -91,7 +91,7 @@
             </div>
         </div>
         <div class="row gy-4">
-            {% for product in featured_products[:4] %}
+            {% for product in featured_products[:8] %}
             <div class="col-lg-3 col-md-6">
                 <div class="product-card h-100" data-category="{{ product.category_name }}">
                     <div class="product-image clickable">
@@ -469,11 +469,11 @@ $(document).ready(function() {
     // เรียกตอนโหลดหน้า
     updateCartBadge();
 
-    // ====== Example: Add to cart button ======
+    // ====== Add to cart button ======
     $('.add-to-cart').on('click', function() {
-        const productId = $(this).data('id');
-        const productName = $(this).data('name');
-        const productPrice = parseFloat($(this).data('price'));
+        const productId = $(this).data('product-id');
+        const productName = $(this).data('product-name');
+        const productPrice = parseFloat($(this).data('product-price'));
 
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
         let existing = cart.find(item => item.id === productId);
@@ -488,6 +488,5 @@ $(document).ready(function() {
         updateCartBadge();
     });
 });
-
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container py-5">
     <h4>คำสั่งซื้อ #{{ order.id }}</h4>
-    <p>วันที่: {{ order.created_at }} | สถานะ: 
+    <p>วันที่: {{ order.created_at | to_bangkok }} | สถานะ: 
         <span id="order-status" class="badge bg-{{ 'success' if order.status=='completed' else 'warning' }}">{{ order.status }}</span>
     </p>
 
@@ -12,7 +12,7 @@
     <p>
         ชื่อ: {{ order.customer_name }}<br>
         เบอร์โทร: {{ order.customer_phone }}<br>
-        ที่อยู่: {{ order.customer_address or 'ไม่ระบุ' }}<br>
+        ที่อยู่: {{ addr.full_address or 'ไม่ระบุ' }}<br>
         หมายเหตุ: {{ order.notes or '-' }}
     </p>
 
@@ -29,7 +29,7 @@
         <tbody>
             {% for item in items %}
             <tr>
-                <td>{{ item.name }}</td>
+                <td>{{ item.product_name }}</td>
                 <td>{{ "%.2f"|format(item.unit_price) }} บาท</td>
                 <td>{{ item.quantity }}</td>
                 <td>{{ "%.2f"|format(item.total_price) }} บาท</td>
@@ -44,17 +44,20 @@
         </tfoot>
     </table>
 
-    {% if order.status == 'pending' %}
-    <div class="d-flex justify-content-end mt-3">
+    <div class="d-flex justify-content-between mt-3">
+        <!-- ปุ่มกลับซ้าย -->
+        <a href="{{ url_for('order_history') }}" class="btn btn-secondary">
+            กลับ
+        </a>
+
+        <!-- ปุ่มยกเลิกขวา -->
+        {% if order.status == 'pending' %}
         <form id="cancel-all-form" action="{{ url_for('cancel_order', order_id=order.id) }}">
             <button type="submit" class="btn btn-danger btn-sm">
                 <i class="fas fa-trash-alt me-1"></i>ยกเลิกคำสั่งซื้อ
             </button>
         </form>
-    </div>
     {% endif %}
-
-    <a href="{{ url_for('order_history') }}" class="btn btn-secondary mt-3">กลับ</a>
 </div>
 
 <script>

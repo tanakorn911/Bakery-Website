@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+
+{% block title %}ใบเสร็จ #{{ order.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.invoice-box {
+    max-width: 500px; /* ขนาดเหมาะสำหรับพิมพ์ใบเสร็จ */
+    margin: 2rem auto 0 auto;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 14px;
+}
+.invoice-header {
+    text-align: center;
+    margin-bottom: 1rem;
+    
+}
+.invoice-header h2 {
+    margin-bottom: 0;
+}
+.table th, .table td {
+    vertical-align: middle;
+    padding: 0.25rem;
+}
+.table tfoot th, .table tfoot td {
+    font-weight: bold;
+}
+.text-end { text-align: right; }
+.text-center { text-align: center; }
+.no-print { margin-top: 1rem; text-align: center; }
+@media print {
+    .no-print { display: none; }
+    body { margin: 0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="invoice-box">
+    <div class="invoice-header">
+        <h2>Sweet Dreams Bakery</h2>
+        <p>ใบเสร็จ / Invoice</p>
+        <small>โทร: 089-123-4567 | Facebook: SweetDreamsBakery</small>
+    </div>
+
+    <div class="row mb-2">
+        <div class="col-6">
+            <strong>ลูกค้า:</strong> {{ order.customer_name | default('-') }}<br>
+            <strong>เบอร์โทร:</strong> {{ order.customer_phone | default('-') }}<br>
+            <strong>ที่อยู่:</strong> {{ addr.full_address | default('-') }}
+        </div>
+        <div class="col-6 text-end">
+            <strong>เลขที่:</strong> #{{ order.id | default('-') }}<br>
+            <strong>วันที่:</strong>
+            {{ order.created_at|to_bangkok or now|to_bangkok }}<br>
+            <strong>สถานะ:</strong> {{ order.status | default('-') }}
+        </div>
+    </div>
+
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>สินค้า</th>
+                <th class="text-center">จำนวน</th>
+                <th class="text-end">ราคา/หน่วย</th>
+                <th class="text-end">รวม</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.product_name | default('-') }}</td>
+                <td class="text-center">{{ item.quantity | default(0) }}</td>
+                <td class="text-end">{{ "{:,.0f}".format(item.unit_price | default(item.price) | default(0)) }} ฿</td>
+                <td class="text-end">{{ "{:,.0f}".format((item.quantity | default(0)) * (item.unit_price | default(item.price) | default(0))) }} ฿</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">ยังไม่มีสินค้า</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="3" class="text-end">รวมทั้งหมด</th>
+                <th class="text-end">{{ "{:,.2f}".format(order.total_amount | default(0)) }} ฿</th>
+            </tr>
+            {% if order.discount %}
+            <tr>
+                <th colspan="3" class="text-end">ส่วนลด</th>
+                <th class="text-end">-{{ "{:,.2f}".format(order.discount) }} ฿</th>
+            </tr>
+            {% endif %}
+            {% if order.tax %}
+            <tr>
+                <th colspan="3" class="text-end">ภาษี</th>
+                <th class="text-end">{{ "{:,.2f}".format(order.tax) }} ฿</th>
+            </tr>
+            {% endif %}
+            <tr>
+                <th colspan="3" class="text-end">ยอดชำระสุทธิ</th>
+                <th class="text-end">{{ "{:,.2f}".format(order.total_amount - (order.discount|default(0)) + (order.tax|default(0))) }} ฿</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="text-center mt-3">
+        ขอบคุณที่อุดหนุนร้าน Sweet Dreams Bakery<br>
+        <span class="text-muted">www.sweetdreams.com</span>
+    </div>
+
+    <div class="text-center no-print">
+        <button onclick="window.print()" class="btn btn-primary mt-3">
+            <i class="fas fa-print me-1"></i>พิมพ์ใบเสร็จ
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://kit.fontawesome.com/a076d05399.js"></script>
+{% endblock %}

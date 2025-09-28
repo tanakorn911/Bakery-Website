@@ -1,25 +1,18 @@
 {% extends "layout.html" %}
 
-{% block title %}ประวัติคำสั่งซื้อ{% endblock %}
+{% block title %}ประวัติคำสั่งซื้อทั้งหมด{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="mb-4">
-        {% if is_admin %}
-            รายการคำสั่งซื้อทั้งหมด
-        {% else %}
-            ประวัติคำสั่งซื้อของคุณ
-        {% endif %}
-    </h2>
+    <h2 class="mb-4">ประวัติคำสั่งซื้อทั้งหมด</h2>
 
     {% if orders %}
     <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>หมายเลขคำสั่งซื้อ</th>
-                {% if is_admin %}
                 <th>ผู้สั่งซื้อ</th>
-                {% endif %}
+                <th>อีเมล</th>
                 <th>จำนวนเงิน (บาท)</th>
                 <th>วันที่สั่งซื้อ</th>
                 <th>สถานะ</th>
@@ -30,9 +23,8 @@
             {% for order in orders %}
             <tr>
                 <td>#{{ order.id }}</td>
-                {% if is_admin %}
                 <td>{{ order.username }}</td>
-                {% endif %}
+                <td>{{ order.email }}</td>
                 <td>{{ "%.2f"|format(order.total_amount) }}</td>
                 <td>{{ order.created_at | to_bangkok }}</td>
                 <td>
@@ -58,7 +50,7 @@
         </tbody>
     </table>
     {% else %}
-    <p>{% if is_admin %}ยังไม่มีคำสั่งซื้อใด{% else %}คุณยังไม่มีคำสั่งซื้อ{% endif %}</p>
+    <p>ยังไม่มีคำสั่งซื้อ</p>
     {% endif %}
 </div>
 {% endblock %}

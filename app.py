@@ -1,15 +1,28 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response, send_file
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 from functools import wraps
 import base64
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 app.secret_key = "sweetdreams_bakery_secret_2024"
 app.permanent_session_lifetime = timedelta(days=7)
 DB_NAME = "bakery.db"
+
+@app.template_filter('to_bangkok')
+def to_bangkok_filter(value, fmt='%d/%m/%Y %H:%M'):
+    if not value:
+        return "N/A"
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return value
+    dt = value.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Bangkok"))
+    return dt.strftime(fmt)
 
 # ========================
 # Database Functions
@@ -497,13 +510,16 @@ def cart():
 def add_to_cart():
     data = request.get_json()
     product_id = str(data.get('product_id'))
-    quantity = int(data.get('quantity', 1))
+    quantity = max(1, int(data.get('quantity', 1)))  # กันค่าติดลบ/ศูนย์
     options = data.get('options', '')
+
     product = get_product_by_id(int(product_id))
     if not product:
         return jsonify({'success': False, 'message': 'ไม่พบสินค้า'})
+
     cart = session.get('cart', {})
     cart_key = f"{product_id}_{options}" if options else product_id
+
     if cart_key in cart:
         cart[cart_key]['quantity'] += quantity
     else:
@@ -515,7 +531,10 @@ def add_to_cart():
             'quantity': quantity,
             'options': options
         }
+
     session['cart'] = cart
+    session.modified = True
+
     total_items, total_price = get_cart_total()
     return jsonify({
         'success': True,
@@ -527,18 +546,22 @@ def add_to_cart():
 @app.route('/update_cart', methods=['POST'])
 def update_cart():
     data = request.get_json()
-    product_id = str(data.get('cart_key'))
+    cart_key = str(data.get('cart_key'))  # 👉 ใช้ชื่อให้ตรงกับ key
     quantity = int(data.get('quantity', 1))
 
     cart = session.get('cart', {})
 
-    if product_id in cart:
-        cart[product_id]['quantity'] = quantity
+    if cart_key in cart:
+        if quantity > 0:
+            cart[cart_key]['quantity'] = quantity
+        else:
+            # ถ้าใส่ 0 หรือติดลบ → ลบออก
+            cart.pop(cart_key)
+
         session['cart'] = cart
+        session.modified = True
 
-        total_items = sum(item['quantity'] for item in cart.values())
-        total_price = sum(item['price'] * item['quantity'] for item in cart.values())
-
+        total_items, total_price = get_cart_total()
         return jsonify({
             'success': True,
             'total_items': total_items,
@@ -595,7 +618,7 @@ def checkout():
     conn = get_db_connection()
     addresses = conn.execute("""
         SELECT id,
-               recipient_name || ', ' || address || 
+               address || 
                CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
                CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
                CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
@@ -764,61 +787,91 @@ def change_password():
 # Order Routes
 # ========================
 
-@app.route("/order/<int:order_id>")
+@app.route('/order/<int:order_id>')
 def order_detail(order_id):
-    user_id = session.get('user_id')
-    if not user_id:
-        flash("กรุณาเข้าสู่ระบบก่อน")
-        return redirect(url_for('login'))
-
     conn = get_db_connection()
-    try:
-        # ดึงคำสั่งซื้อ
-        order = conn.execute("""
-            SELECT * FROM orders 
-            WHERE id = ? AND user_id = ?
-        """, (order_id, user_id)).fetchone()
-
-        if not order:
-            flash("ไม่พบคำสั่งซื้อนี้")
-            return redirect(url_for('profile'))
-
-        # ดึงรายการสินค้า
-        items = conn.execute("""
-            SELECT oi.*, p.name, p.image 
-            FROM order_items oi 
-            JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = ?
-        """, (order_id,)).fetchall()
-
-    finally:
+    order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+    
+    if not order:
         conn.close()
+        return "ไม่พบคำสั่งซื้อ", 404
 
-    return render_template("order_detail.html", order=order, items=items)
+    # แปลง Row เป็น dict
+    order = dict(order)
+
+    # แปลง created_at เป็น datetime
+    if order.get("created_at"):
+        try:
+            order["created_at"] = datetime.fromisoformat(order["created_at"])
+        except ValueError:
+            order["created_at"] = None
+
+    # ดึงที่อยู่ล่าสุดของผู้ใช้
+    addr = None
+    if order.get('user_id'):
+        addr_row = conn.execute("""
+            SELECT *,
+                   address || 
+                   CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
+                   CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
+                   CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
+                   AS full_address
+            FROM addresses
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+        """, (order['user_id'],)).fetchone()
+        if addr_row:
+            addr = dict(addr_row)
+
+    # ตรวจสอบสิทธิ์: ผู้ใช้ปกติดูได้เฉพาะของตัวเอง
+    if session.get("role") != "admin":
+        if session.get("user_id") != order.get("user_id"):
+            conn.close()
+            flash("คุณไม่มีสิทธิ์เข้าดูคำสั่งซื้อนี้")
+            return redirect(url_for("order_history"))
+
+    # ดึงสินค้า
+    items = conn.execute("""
+        SELECT oi.*, p.name AS product_name, p.price AS product_price
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id=?
+    """, (order_id,)).fetchall()
+
+    # แปลง Row เป็น dict
+    items = [dict(i) for i in items]
+
+    conn.close()
+    return render_template("order_detail.html", order=order, addr=addr, items=items)
+
 
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
 @login_required
 def cancel_order(order_id):
-    if not session.get('user_id'):
-        return jsonify({'success': False, 'message': 'กรุณาเข้าสู่ระบบ'})
-
     conn = get_db_connection()
-    order = conn.execute("""
-        SELECT * FROM orders 
-        WHERE id = ? AND user_id = ? AND status = 'pending'
-    """, (order_id, session.get('user_id'))).fetchone()
+    
+    # ตรวจสอบสิทธิ์: admin หรือเจ้าของคำสั่งซื้อ
+    if session.get('role') == 'admin':
+        order = conn.execute("""
+            SELECT * FROM orders 
+            WHERE id = ? AND status = 'pending'
+        """, (order_id,)).fetchone()
+    else:
+        order = conn.execute("""
+            SELECT * FROM orders 
+            WHERE id = ? AND user_id = ? AND status = 'pending'
+        """, (order_id, session.get('user_id'))).fetchone()
 
     if not order:
         conn.close()
         return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อหรือไม่สามารถยกเลิกได้'})
 
     try:
-        # ดึงรายการสินค้า
         items = conn.execute("""
             SELECT product_id, quantity FROM order_items WHERE order_id = ?
         """, (order_id,)).fetchall()
 
-        # คืน stock
         for item in items:
             conn.execute("""
                 UPDATE products
@@ -826,7 +879,6 @@ def cancel_order(order_id):
                 WHERE id = ?
             """, (item['quantity'], item['product_id']))
 
-        # เปลี่ยน status เป็น cancelled
         conn.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order_id,))
         conn.commit()
         conn.close()
@@ -911,19 +963,344 @@ def admin():
 
 @app.route('/admin/orders')
 def admin_orders():
+    # ตรวจสอบสิทธิ์แอดมิน
     if session.get('role') != 'admin':
         flash('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
         return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    
+    # ดึงคำสั่งซื้อทั้งหมด
+    orders_raw = conn.execute("SELECT * FROM orders ORDER BY created_at DESC").fetchall()
+    orders = []
+
+    for order_row in orders_raw:
+        order = dict(order_row)  # แปลง Row เป็น dict
+
+        # แปลง created_at เป็น datetime
+        if order.get('created_at'):
+            try:
+                order['created_at'] = datetime.strptime(order['created_at'], "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                order['created_at'] = None
+
+        # ดึงที่อยู่ผู้รับ
+        if order.get('address_id'):
+            addr = conn.execute(
+                "SELECT * FROM addresses WHERE id=?",
+                (order['address_id'],)
+            ).fetchone()
+            if addr:
+                order['address'] = f"{addr['address']}, {addr.get('city','')}, {addr.get('province','')}, {addr.get('postal_code','')}"
+            else:
+                order['address'] = '-'
+        else:
+            order['address'] = '-'
+
+        # ดึงรายการสินค้า
+        items_raw = conn.execute(
+            """
+            SELECT oi.*, p.name AS product_name, p.price AS unit_price
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id=?
+            """,
+            (order['id'],)
+        ).fetchall()
+
+        items = []
+        for item in items_raw:
+            items.append({
+                'product_name': item['product_name'] or '-',
+                'quantity': item['quantity'],
+                'price': float(item['unit_price'] or 0),
+                'total': float(item['quantity'] * (item['unit_price'] or 0))
+            })
+
+        order['items'] = items
+        # คำนวณยอดรวมทั้งหมด
+        order['total_amount'] = sum(i['total'] for i in items)
+
+        orders.append(order)
+
+    conn.close()
+    return render_template('admin_orders.html', orders=orders)
+
+
+@app.route("/admin/print_order/<int:order_id>")
+def admin_print_order(order_id):
+    if session.get('role') != 'admin':
+        flash('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
+        return redirect(url_for('index'))
+
+    conn = get_db_connection()
+    
+    try:
+        # ดึงข้อมูลคำสั่งซื้อ พร้อมข้อมูลลูกค้า
+        order_row = conn.execute("""
+            SELECT o.*, u.email as customer_email, u.username
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            WHERE o.id = ?
+        """, (order_id,)).fetchone()
+        
+        if not order_row:
+            flash('ไม่พบคำสั่งซื้อ')
+            return redirect(url_for('admin_orders'))
+
+        # แปลง Row เป็น dict
+        order = dict(order_row)
+
+        # แปลง created_at เป็น datetime object
+        if order.get("created_at"):
+            try:
+                if isinstance(order["created_at"], str):
+                    # ลองหลายรูปแบบ datetime
+                    formats = [
+                        "%Y-%m-%d %H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S.%f",
+                        "%Y-%m-%dT%H:%M:%S",
+                        "%Y-%m-%dT%H:%M:%S.%f"
+                    ]
+                    
+                    parsed_date = None
+                    for fmt in formats:
+                        try:
+                            parsed_date = datetime.strptime(order["created_at"], fmt)
+                            break
+                        except ValueError:
+                            continue
+                    
+                    order["created_at"] = parsed_date or datetime.now()
+            except (ValueError, TypeError):
+                order["created_at"] = datetime.now()
+
+        # ดึงรายการสินค้า พร้อมชื่อสินค้า
+        items_rows = conn.execute("""
+            SELECT oi.*, p.name as product_name, p.image as product_image
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+            ORDER BY oi.id
+        """, (order_id,)).fetchall()
+        
+        # แปลง items เป็น list of dict
+        items = [dict(item) for item in items_rows]
+
+        # คำนวณข้อมูลเพิ่มเติม
+        order['item_count'] = len(items)
+        
+        # คำนวณยอดรวมใหม่ถ้าไม่มี (เผื่อข้อมูลเสีย)
+        if not order.get('total_amount') or order['total_amount'] == 0:
+            order['total_amount'] = sum(
+                item.get('total_price', 0) or 
+                (item.get('quantity', 0) * item.get('unit_price', 0))
+                for item in items
+            )
+
+        # ดึงที่อยู่ลูกค้า (แก้ไขให้ใช้ user_id จาก order แทน session)
+        addr = None
+        if order.get('user_id'):
+            addr_rows = conn.execute("""
+                SELECT *,
+                       address || 
+                       CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
+                       CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
+                       CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
+                       AS full_address
+                FROM addresses
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+            """, (order['user_id'],)).fetchone()
+            
+            if addr_rows:
+                addr = dict(addr_rows)
+
+        return render_template(
+            "print_order.html",
+            order=order,
+            items=items,
+            addr=addr,
+            now=datetime.now(),
+            show_qr=True  # เปิดใช้ QR code
+        )
+        
+    except Exception as e:
+        flash(f'เกิดข้อผิดพลาด: {str(e)}')
+        return redirect(url_for('admin_orders'))
+    finally:
+        conn.close()
+
+
+# เพิ่ม route สำหรับส่งอีเมลใบเสร็จ
+@app.route('/send_receipt_email', methods=['POST'])
+def send_receipt_email():
+    """ส่งใบเสร็จทางอีเมล"""
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
+    
+    data = request.get_json()
+    order_id = data.get('id')
+    customer_email = data.get('customer_email')
+    customer_name = data.get('customer_name', 'ลูกค้า')
+    
+    if not order_id or not customer_email:
+        return jsonify({'success': False, 'message': 'ข้อมูลไม่ครบถ้วน'})
+    
+    try:
+        # TODO: ติดตั้งและตั้งค่า SMTP สำหรับส่งอีเมล
+        # ตัวอย่าง:
+        # from flask_mail import Mail, Message
+        # 
+        # msg = Message(
+        #     subject=f'ใบเสร็จ Sweet Dreams Bakery #{order_id}',
+        #     recipients=[customer_email],
+        #     html=render_template('email_receipt.html', order_id=order_id)
+        # )
+        # mail.send(msg)
+        
+        # สำหรับตอนนี้แค่ log
+        print(f"Would send receipt #{order_id} to {customer_email}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'ส่งใบเสร็จไปที่ {customer_email} เรียบร้อยแล้ว'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'เกิดข้อผิดพลาด: {str(e)}'
+        })
+
+
+# เพิ่ม route สำหรับ thermal printer API
+@app.route('/api/thermal-print', methods=['POST'])
+def thermal_print():
+    """พิมพ์ผ่านเครื่องพิมพ์ thermal"""
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
+    
+    data = request.get_json()
+    content = data.get('content', '')
+    
+    if not content:
+        return jsonify({'success': False, 'message': 'ไม่มีข้อมูลสำหรับพิมพ์'})
+    
+    try:
+        # TODO: เชื่อมต่อกับ thermal printer
+        # ตัวอย่าง:
+        # import win32print
+        # import win32api
+        # 
+        # printer_name = win32print.GetDefaultPrinter()
+        # hPrinter = win32print.OpenPrinter(printer_name)
+        # 
+        # try:
+        #     hJob = win32print.StartDocPrinter(hPrinter, 1, ("Receipt", None, "RAW"))
+        #     win32print.StartPagePrinter(hPrinter)
+        #     win32print.WritePrinter(hPrinter, content.encode('utf-8'))
+        #     win32print.EndPagePrinter(hPrinter)
+        #     win32print.EndDocPrinter(hPrinter)
+        # finally:
+        #     win32print.ClosePrinter(hPrinter)
+        
+        # สำหรับตอนนี้แค่ log
+        print(f"Would print thermal receipt:\n{content}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'พิมพ์ใบเสร็จสำเร็จ'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'เกิดข้อผิดพลาด: {str(e)}'
+        })
+
+
+# เพิ่มฟังก์ชันช่วยสำหรับจัดการ datetime
+def safe_datetime_parse(date_string, default=None):
+    """แปลง string เป็น datetime อย่างปลอดภัย"""
+    if not date_string:
+        return default or datetime.now()
+    
+    if isinstance(date_string, datetime):
+        return date_string
+    
+    formats = [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%d"
+    ]
+    
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_string, fmt)
+        except ValueError:
+            continue
+    
+    return default or datetime.now()
+
+
+# ปรับปรุง template filter
+@app.template_filter('safe_datetime')
+def safe_datetime_filter(value, format='%d/%m/%Y %H:%M'):
+    """Template filter สำหรับแสดง datetime อย่างปลอดภัย"""
+    try:
+        if isinstance(value, str):
+            value = safe_datetime_parse(value)
+        elif not isinstance(value, datetime):
+            return 'ไม่ระบุ'
+        
+        return value.strftime(format)
+    except (ValueError, AttributeError):
+        return 'ไม่ระบุ'
+
+
+@app.template_filter('format_currency')
+def format_currency(value):
+    """Format ตัวเลขเป็นสกุลเงิน"""
+    try:
+        return "{:,.0f}".format(float(value or 0))
+    except (ValueError, TypeError):
+        return "0"
+
+
+# ปรับปรุงการจัดการ order status
+def get_status_text(status):
+    """แปลง status เป็นข้อความไทย"""
+    status_map = {
+        'pending': 'รอดำเนินการ',
+        'processing': 'กำลังจัดเตรียม',
+        'completed': 'เสร็จสิ้น',
+        'cancelled': 'ยกเลิกแล้ว'
+    }
+    return status_map.get(status, status)
+
+
+@app.template_filter('status_text')
+def status_text_filter(status):
+    """Template filter สำหรับแสดงสถานะ"""
+    return get_status_text(status)
+@app.route("/admin/order_history")
+def admin_order_history():
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+
     conn = get_db_connection()
     orders = conn.execute("""
-        SELECT o.*, COUNT(oi.id) as item_count
+        SELECT o.*, u.username, u.email
         FROM orders o
-        LEFT JOIN order_items oi ON o.id = oi.order_id
-        GROUP BY o.id
+        JOIN users u ON o.user_id = u.id
         ORDER BY o.created_at DESC
     """).fetchall()
     conn.close()
-    return render_template('admin_orders.html', orders=orders)
+
+    return render_template("admin_order_history.html", orders=orders)
 
 # ========================
 # Admin API Routes
@@ -931,6 +1308,10 @@ def admin_orders():
 
 @app.route('/admin/product/<int:product_id>', methods=['GET'])
 def get_product(product_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     conn = get_db_connection()
     product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
     conn.close()
@@ -941,6 +1322,10 @@ def get_product(product_id):
 
 @app.route('/admin/add_product', methods=['POST'])
 def add_product():
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     data = request.get_json()
     conn = get_db_connection()
     conn.execute('''
@@ -958,6 +1343,10 @@ def add_product():
 
 @app.route('/admin/update_product/<int:product_id>', methods=['POST'])
 def update_product(product_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     data = request.get_json()
     conn = get_db_connection()
     conn.execute('''
@@ -977,6 +1366,10 @@ def update_product(product_id):
 
 @app.route('/admin/delete_product/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     conn = get_db_connection()
     conn.execute('DELETE FROM products WHERE id=?', (product_id,))
     conn.commit()
@@ -986,6 +1379,10 @@ def delete_product(product_id):
 
 @app.route('/admin/toggle_product_status/<int:product_id>', methods=['POST'])
 def toggle_product_status(product_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     conn = get_db_connection()
     product = conn.execute('SELECT is_available FROM products WHERE id=?', (product_id,)).fetchone()
     if product:
@@ -1000,6 +1397,10 @@ def toggle_product_status(product_id):
 
 @app.route('/admin/toggle_product_featured/<int:product_id>', methods=['POST'])
 def toggle_product_featured(product_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
     conn = get_db_connection()
     product = conn.execute('SELECT is_featured FROM products WHERE id=?', (product_id,)).fetchone()
     if product:
@@ -1137,19 +1538,32 @@ def internal_error(error):
 @app.route("/order_history")
 def order_history():
     user_id = session.get("user_id")
+    is_admin = session.get("is_admin", False)  # สมมติคุณเก็บสิทธิ์แอดมินใน session
+
     if not user_id:
-        return redirect(url_for("login")) 
+        return redirect(url_for("login"))
 
     conn = get_db_connection()
-    orders = conn.execute("""
-        SELECT * FROM orders 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC
-    """, (user_id,)).fetchall()
+    
+    if is_admin:
+        # แอดมินเห็นคำสั่งซื้อทั้งหมด พร้อม username ของผู้สั่ง
+        orders = conn.execute("""
+            SELECT o.*, u.username
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC
+        """).fetchall()
+    else:
+        # ผู้ใช้ทั่วไปเห็นแค่คำสั่งซื้อของตัวเอง
+        orders = conn.execute("""
+            SELECT * FROM orders 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (user_id,)).fetchall()
+    
     conn.close()
 
-    return render_template("order_history.html", orders=orders)
-    
+    return render_template("order_history.html", orders=orders, is_admin=is_admin)
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, format='%d/%m/%Y %H:%M'):
@@ -1258,12 +1672,50 @@ def delete_address(address_id):
 @app.route('/track_order', methods=['GET', 'POST'])
 def track_order():
     order_data = None
+    addr = None
+    all_orders = []
+
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("กรุณาเข้าสู่ระบบก่อน")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+
+    # ดึงคำสั่งซื้อของผู้ใช้คนนี้ (ล่าสุด 50 รายการ)
+    all_orders = conn.execute(
+        "SELECT id, created_at, status FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
+        (user_id,)
+    ).fetchall()
+
     if request.method == 'POST':
         order_id = request.form['order_id']
-        conn = get_db_connection()
         order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
         
         if order:
+            order = dict(order)
+
+            # ตรวจสอบสิทธิ์
+            if session.get("role") != "admin":
+                if user_id != order.get("user_id"):
+                    conn.close()
+                    flash("คุณไม่มีสิทธิ์เข้าดูคำสั่งซื้อนี้")
+                    return redirect(url_for("track_order"))
+
+            # ดึงที่อยู่ล่าสุด
+            addr = conn.execute("""
+                SELECT *,
+                       address || 
+                       CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
+                       CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
+                       CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
+                       AS full_address
+                FROM addresses
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+            """, (order["user_id"],)).fetchone()
+
             # ดึง order items
             items = conn.execute("""
                 SELECT oi.*, p.name as product_name, p.price as product_price
@@ -1272,16 +1724,30 @@ def track_order():
                 WHERE oi.order_id = ?
             """, (order_id,)).fetchall()
             
-            # แปลง row objects เป็น dict
-            items_list = [dict(item) for item in items]
-            
-            # แปลง order เป็น dict
-            order_data = dict(order)
-            order_data['order_items'] = items_list  # key ใหม่ไม่ชนกับ dict.items()
+            order['order_items'] = [dict(item) for item in items]
+            order_data = order
         
-        conn.close()
+    conn.close()
     
-    return render_template('track_order.html', order=order_data)
+    return render_template('track_order.html', order=order_data, addr=addr, all_orders=all_orders)
+
+
+
+@app.route('/get_cart_summary')
+def get_cart_summary():
+    total_items, total_price = get_cart_total()
+    return jsonify({'success': True, 'total_items': total_items, 'total_price': total_price})
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='%d/%m/%Y'):
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return value  # คืนค่าเดิมถ้าแปลงไม่ได้
+    if isinstance(value, datetime):
+        return value.strftime(format)
+    return value
 
 # ========================
 # Initialize Application

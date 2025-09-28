@@ -160,6 +160,16 @@
     </div>
 
     {% if cart_items %}
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{{ url_for('index') }}#products" class="btn btn-outline-primary py-2 shadow-sm">
+                <i class="fas fa-arrow-left me-2"></i> เลือกซื้อสินค้าต่อ
+            </a>
+            <button id="clear-cart-btn" class="btn btn-danger py-2 shadow-sm">
+                <i class="fas fa-trash-alt me-2"></i> เคลียร์ตะกร้าทั้งหมด
+            </button>
+
+        </div>
+
         <div class="row">
             <!-- Cart Items -->
             <div class="col-lg-8">
@@ -179,7 +189,7 @@
                                     </div>
                                 {% endif %}
                             </div>
-
+                            
                             <!-- Product Info -->
                             <div class="col-md-6 col-sm-8 mb-3 mb-md-0">
                                 <div class="item-info">
@@ -239,14 +249,6 @@
                         </div>
                     </div>
                     {% endfor %}
-                </div>
-
-                <!-- Continue Shopping -->
-                <div class="mt-4">
-                    <a href="{{ url_for('index') }}#products" class="btn btn-outline-primary">
-                        <i class="fas fa-arrow-left me-2"></i>
-                        เลือกซื้อสินค้าต่อ
-                    </a>
                 </div>
             </div>
 

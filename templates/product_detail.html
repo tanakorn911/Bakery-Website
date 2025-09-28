@@ -172,8 +172,7 @@
                     
                     {% if product.created_at %}
                     <div class="info-item">
-                        <strong>วันที่เพิ่มสินค้า:</strong> 
-                        {{ moment(product.created_at).format('DD/MM/YYYY') if moment else 'N/A' }}
+                        <strong>วันที่เพิ่มสินค้า:</strong> {{ product.created_at|to_bangkok }}
                     </div>
                     {% endif %}
                 </div>

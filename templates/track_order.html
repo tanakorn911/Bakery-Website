@@ -15,12 +15,32 @@
             </button>
         </div>
     </form>
-
+    {% if all_orders %}
+        <div class="mt-4">
+            <h5>คำสั่งซื้อของคุณล่าสุด</h5>
+            <ul class="list-group">
+                {% for o in all_orders %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>คำสั่งซื้อ #{{ o.id }} - วันที่: {{ o.created_at | to_bangkok }}</span>
+                    {% if o.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">รอดำเนินการ</span>
+                    {% elif o.status == 'processing' %}
+                        <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
+                    {% elif o.status == 'completed' %}
+                        <span class="badge bg-success text-white">เสร็จสิ้น</span>
+                    {% elif o.status == 'cancelled' %}
+                        <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
     {% if order %}
     <div class="card shadow-sm">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="mb-0">คำสั่งซื้อ #{{ order.id }}</h5>
-            <span>
+            <span id="order-status">
                 {% if order.status == 'pending' %}
                     <span class="badge bg-warning text-dark">รอดำเนินการ</span>
                 {% elif order.status == 'processing' %}
@@ -39,7 +59,7 @@
                     <strong>โทร:</strong> {{ order.customer_phone }}
                 </div>
                 <div class="col-md-6 text-md-end">
-                    <strong>วันที่/เวลา:</strong> {{ order.created_at }}<br>
+                    <strong>วันที่/เวลา:</strong> {{ order.created_at | to_bangkok }}<br>
                     <strong>ยอดรวม:</strong> {{ order.total_amount }} ฿
                 </div>
             </div>
@@ -68,15 +88,56 @@
                     </tbody>
                 </table>
             </div>
-
-            <div class="mt-3">
-                <p><strong>ที่อยู่จัดส่ง:</strong> {{ order.customer_address or 'ไม่ระบุ' }}</p>
+            <div class="d-flex justify-content-between align-items-start mt-3">
+            <!-- ซ้าย: ที่อยู่และหมายเหตุ -->
+            <div>
+                <p><strong>ที่อยู่จัดส่ง:</strong> {{ addr.full_address or 'ไม่ระบุ' }}</p>
                 <p><strong>หมายเหตุ:</strong> {{ order.notes or '-' }}</p>
             </div>
+
+            <!-- ขวา: ปุ่มยกเลิก -->
+            {% if order.status == 'pending' %}
+            <div>
+                <form id="cancel-all-form" action="{{ url_for('cancel_order', order_id=order.id) }}">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash-alt me-1"></i>ยกเลิกคำสั่งซื้อ
+                    </button>
+                </form>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% elif searched %}
         <div class="alert alert-warning text-center">ไม่พบคำสั่งซื้อที่มีหมายเลขนี้</div>
     {% endif %}
 </div>
+
+<script>
+document.getElementById('cancel-all-form')?.addEventListener('submit', function(e) {
+    e.preventDefault(); // ป้องกัน form submit ปกติ
+
+    if(!confirm('คุณแน่ใจว่าจะยกเลิกคำสั่งซื้อทั้งหมด?')) return;
+
+    fetch(this.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: {{ order.id }} }),
+        credentials: 'same-origin'
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message); // แสดงข้อความตอบกลับ
+        if(data.success){
+            // อัปเดต badge สถานะทันที
+            const badge = document.getElementById('order-status');
+            badge.textContent = 'cancelled';
+            badge.className = 'badge bg-danger';
+            // ซ่อนปุ่มยกเลิก
+            document.getElementById('cancel-all-form').style.display = 'none';
+        }
+    })
+    .catch(err => alert('เกิดข้อผิดพลาด: ' + err));
+});
+</script>
+
 {% endblock %}

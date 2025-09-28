@@ -1,83 +1,202 @@
 /**
  * Sweet Dreams Bakery - Main JavaScript
- * Handles cart management, AJAX requests, and UI interactions
+ * Organized and optimized for better performance and maintainability
  */
 
-// Global variables
+// ===========================
+// 1. GLOBAL VARIABLES & CONFIG
+// ===========================
 let cart = {};
 let isLoading = false;
 
-// DOM Content Loaded
-$(document).ready(function() {
-    initializeApp();
-});
+const CONFIG = {
+    TOAST_DELAY: 4000,
+    ALERT_FADE_DELAY: 5000,
+    LOADING_DELAY: 300,
+    ANIMATION_DELAY: 100,
+    SCROLL_OFFSET: 100,
+    SCROLL_DURATION: 800
+};
+
+// ===========================
+// 2. UTILITY FUNCTIONS
+// ===========================
 
 /**
- * Initialize the application
+ * Debounce function for performance optimization
  */
-function initializeApp() {
-    setupEventListeners();
-    initializeAnimations();
-    updateCartBadge();
-    
-    // Initialize tooltips
-    $('[data-bs-toggle="tooltip"]').tooltip();
-    
-    // Auto-hide flash messages
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, 5000);
-    
-    console.log('🍰 Sweet Dreams Bakery - Application Initialized');
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 /**
- * Setup event listeners
+ * Format price in Thai Baht format
  */
-function setupEventListeners() {
-    // Add to cart buttons
-    $(document).on('click', '.add-to-cart', handleAddToCart);
-    
-    // Quantity update buttons
-    $(document).on('click', '.quantity-btn', handleQuantityUpdate);
-    
-    // Remove from cart buttons
-    $(document).on('click', '.remove-from-cart', handleRemoveFromCart);
-    
-    // Quick view product
-    $(document).on('click', '.quick-view', handleQuickView);
-    
-    // Search functionality
-    $('#search-input').on('input', debounce(handleSearch, 300));
-    
-    // Category filter
-    $(document).on('click', '.category-filter', function() {
-        const category = $(this).data('category');
-        $('.category-filter').removeClass('active');
-        $(this).addClass('active');
-        if (category === 'all') {
-            $('.category-section').show();
-        } else {
-            $('.category-section').hide();
-            $(`.category-section[data-category="${category}"]`).show();
+function formatPrice(price) {
+    return new Intl.NumberFormat('th-TH', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(price) + ' บาท';
+}
+
+/**
+ * Format number with commas
+ */
+function numberWithCommas(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Validate Thai phone number
+ */
+function validateThaiPhone(phone) {
+    const cleaned = phone.replace(/[-\s]/g, '');
+    return /^[0-9]{9,10}$/.test(cleaned);
+}
+
+/**
+ * Get Thai date format
+ */
+function getThaiDate(date = new Date()) {
+    return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
+
+/**
+ * Copy text to clipboard with fallback
+ */
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return successful;
+        } catch (err) {
+            document.body.removeChild(textArea);
+            return false;
         }
+    }
+}
+
+// ===========================
+// 3. STORAGE HELPER
+// ===========================
+const StorageHelper = {
+    set: function(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (e) {
+            console.warn('LocalStorage not available:', e);
+            return false;
+        }
+    },
+    
+    get: function(key, defaultValue = null) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (e) {
+            console.warn('LocalStorage not available:', e);
+            return defaultValue;
+        }
+    },
+    
+    remove: function(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.warn('LocalStorage not available:', e);
+            return false;
+        }
+    }
+};
+
+// ===========================
+// 4. UI COMPONENTS & ANIMATIONS
+// ===========================
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    const toast = $('#toast');
+    const toastBody = toast.find('.toast-body');
+    
+    // Set message and type
+    toastBody.text(message);
+    
+    // Remove existing type classes
+    toast.removeClass('toast-success toast-error toast-warning toast-info');
+    
+    // Add appropriate class
+    toast.addClass(`toast-${type}`);
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast[0], {
+        autohide: true,
+        delay: CONFIG.TOAST_DELAY
     });
     
-    // Smooth scroll for anchor links
-    $('a[href^="#"]').on('click', handleSmoothScroll);
-    
-    // Form validation
-    $('form').on('submit', handleFormValidation);
-    
-    // Loading overlay
-    $(document).on('ajaxStart', showLoading).on('ajaxStop', hideLoading);
+    bsToast.show();
 }
 
 /**
- * Initialize animations
+ * Show/Hide loading overlay
+ */
+function showLoading() {
+    if (!isLoading) {
+        isLoading = true;
+        $('#loading-overlay').removeClass('d-none');
+    }
+}
+
+function hideLoading() {
+    setTimeout(() => {
+        isLoading = false;
+        $('#loading-overlay').addClass('d-none');
+    }, CONFIG.LOADING_DELAY);
+}
+
+/**
+ * Animate cart icon
+ */
+function animateCartIcon() {
+    const cartIcon = $('.cart-link i');
+    cartIcon.addClass('fa-bounce');
+    
+    setTimeout(() => {
+        cartIcon.removeClass('fa-bounce');
+    }, 1000);
+}
+
+/**
+ * Initialize animations with Intersection Observer
  */
 function initializeAnimations() {
-    // Intersection Observer for scroll animations
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
@@ -99,7 +218,97 @@ function initializeAnimations() {
 }
 
 /**
- * Handle add to cart
+ * Initialize lazy loading for images
+ */
+function initLazyLoading() {
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+                imageObserver.unobserve(img);
+            }
+        });
+    });
+
+    images.forEach(img => imageObserver.observe(img));
+}
+
+/**
+ * Initialize back to top button
+ */
+function initBackToTop() {
+    const backToTopBtn = $('<button>')
+        .attr('id', 'back-to-top')
+        .addClass('btn btn-primary position-fixed')
+        .css({
+            'bottom': '20px',
+            'right': '20px',
+            'z-index': '1000',
+            'border-radius': '50%',
+            'width': '50px',
+            'height': '50px',
+            'display': 'none'
+        })
+        .html('<i class="fas fa-arrow-up"></i>')
+        .appendTo('body');
+
+    $(window).scroll(function() {
+        if ($(this).scrollTop() > 300) {
+            backToTopBtn.fadeIn();
+        } else {
+            backToTopBtn.fadeOut();
+        }
+    });
+
+    backToTopBtn.click(function() {
+        $('html, body').animate({scrollTop: 0}, CONFIG.SCROLL_DURATION);
+        return false;
+    });
+}
+
+// ===========================
+// 5. CART MANAGEMENT SYSTEM
+// ===========================
+
+/**
+ * Update cart badge display
+ */
+function updateCartBadge(totalItems = 0) {
+    const badge = $('#cart-badge');
+    if (totalItems > 0) {
+        badge.text(totalItems).removeClass('d-none');
+    } else {
+        badge.addClass('d-none');
+    }
+}
+
+/**
+ * Update cart totals display
+ */
+function updateCartTotals(totalItems, totalPrice) {
+    $('#total-items').text(`${totalItems} ชิ้น`);
+    $('#subtotal-price').text(formatPrice(totalPrice));
+    $('#total-price').text(formatPrice(totalPrice));
+    
+    updateCartBadge(totalItems);
+}
+
+/**
+ * Get cart summary on page load
+ */
+function loadCartSummary() {
+    $.get('/get_cart_summary', function(res) {
+        if (res.success) {
+            updateCartBadge(res.total_items);
+        }
+    });
+}
+
+/**
+ * Handle add to cart functionality
  */
 function handleAddToCart(e) {
     e.preventDefault();
@@ -165,7 +374,7 @@ function handleAddToCart(e) {
 }
 
 /**
- * Handle quantity update
+ * Handle quantity update in cart
  */
 function handleQuantityUpdate(e) {
     e.preventDefault();
@@ -196,7 +405,7 @@ function handleQuantityUpdate(e) {
 }
 
 /**
- * Update cart quantity
+ * Update specific cart item quantity
  */
 function updateCartQuantity(cartKey, quantity) {
     const data = {
@@ -236,7 +445,7 @@ function updateCartQuantity(cartKey, quantity) {
 }
 
 /**
- * Handle remove from cart
+ * Handle remove item from cart
  */
 function handleRemoveFromCart(e) {
     e.preventDefault();
@@ -291,20 +500,48 @@ function handleRemoveFromCart(e) {
 }
 
 /**
- * Handle quick view
+ * Handle clear entire cart
  */
-function handleQuickView(e) {
+function handleClearCart(e) {
     e.preventDefault();
-    
-    const productId = $(this).data('product-id');
-    
-    // For now, redirect to product detail page
-    // In future, could open a modal with product details
-    window.location.href = `/product/${productId}`;
+
+    if (!confirm('คุณต้องการลบสินค้าทั้งหมดในตะกร้าหรือไม่?')) return;
+
+    $.ajax({
+        url: '/clear_cart',
+        type: 'POST',
+        contentType: 'application/json',
+        success: function(response) {
+            if (response.success) {
+                // Clear all items with animation
+                $('.cart-item').fadeOut(300, function() {
+                    $(this).remove();
+                });
+
+                // Update cart totals
+                updateCartTotals(0, 0);
+
+                // Show success toast
+                showToast(response.message, 'success');
+
+                // Reload page to show empty cart
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+            }
+        },
+        error: function() {
+            showToast('เกิดข้อผิดพลาดในการเคลียร์ตะกร้า', 'error');
+        }
+    });
 }
 
+// ===========================
+// 6. SEARCH & FILTER SYSTEM
+// ===========================
+
 /**
- * Handle search
+ * Handle search functionality
  */
 function handleSearch() {
     const query = $('#search-input').val().toLowerCase();
@@ -339,8 +576,12 @@ function handleCategoryFilter(e) {
     $(this).addClass('active');
     
     if (category === 'all') {
+        $('.category-section').show();
         $('.product-card').show();
     } else {
+        $('.category-section').hide();
+        $(`.category-section[data-category="${category}"]`).show();
+        
         $('.product-card').each(function() {
             const productCategory = $(this).data('category');
             if (productCategory === category) {
@@ -352,8 +593,12 @@ function handleCategoryFilter(e) {
     }
 }
 
+// ===========================
+// 7. NAVIGATION & SCROLL SYSTEM
+// ===========================
+
 /**
- * Handle smooth scroll
+ * Handle smooth scrolling
  */
 function handleSmoothScroll(e) {
     const target = $(this).attr('href');
@@ -364,11 +609,34 @@ function handleSmoothScroll(e) {
         const targetElement = $(target);
         if (targetElement.length) {
             $('html, body').animate({
-                scrollTop: targetElement.offset().top - 100
-            }, 800);
+                scrollTop: targetElement.offset().top - CONFIG.SCROLL_OFFSET
+            }, CONFIG.SCROLL_DURATION);
         }
     }
 }
+
+/**
+ * Update active navigation based on scroll position
+ */
+function updateActiveNavigation() {
+    $(window).scroll(function() {
+        let current = '';
+        $('section[id]').each(function() {
+            const sectionTop = $(this).offset().top;
+            if ($(window).scrollTop() >= sectionTop - 200) {
+                current = $(this).attr('id');
+            }
+        });
+        $('.nav-link').removeClass('active');
+        if (current) {
+            $(`.nav-link[href="#${current}"]`).addClass('active');
+        }
+    });
+}
+
+// ===========================
+// 8. FORM VALIDATION SYSTEM
+// ===========================
 
 /**
  * Handle form validation
@@ -405,9 +673,8 @@ function handleFormValidation(e) {
     // Phone validation (Thai format)
     form.find('input[type="tel"]').each(function() {
         const phone = $(this).val();
-        const phoneRegex = /^[0-9]{9,10}$/;
         
-        if (phone && !phoneRegex.test(phone.replace(/[-\s]/g, ''))) {
+        if (phone && !validateThaiPhone(phone)) {
             $(this).addClass('is-invalid');
             isValid = false;
         }
@@ -422,275 +689,18 @@ function handleFormValidation(e) {
     }
 }
 
-/**
- * Update cart badge
- */
-function updateCartBadge(totalItems = null) {
-    const badge = $('#cart-badge');
-    
-    if (totalItems !== null) {
-        if (totalItems > 0) {
-            badge.text(totalItems).show();
-        } else {
-            badge.hide();
-        }
-    }
-}
+// ===========================
+// 9. ORDER MANAGEMENT
+// ===========================
 
 /**
- * Update cart totals
- */
-function updateCartTotals(totalItems, totalPrice) {
-    $('#total-items').text(`${totalItems} ชิ้น`);
-    $('#total-price').text(formatPrice(totalPrice));
-    updateCartBadge(totalItems);
-}
-
-/**
- * Animate cart icon
- */
-function animateCartIcon() {
-    const cartIcon = $('.cart-link i');
-    cartIcon.addClass('fa-bounce');
-    
-    setTimeout(() => {
-        cartIcon.removeClass('fa-bounce');
-    }, 1000);
-}
-
-/**
- * Show toast notification
- */
-function showToast(message, type = 'info') {
-    const toast = $('#toast');
-    const toastBody = toast.find('.toast-body');
-    
-    // Set message and type
-    toastBody.text(message);
-    
-    // Remove existing type classes
-    toast.removeClass('toast-success toast-error toast-warning toast-info');
-    
-    // Add appropriate class
-    toast.addClass(`toast-${type}`);
-    
-    // Show toast
-    const bsToast = new bootstrap.Toast(toast[0], {
-        autohide: true,
-        delay: 4000
-    });
-    
-    bsToast.show();
-}
-
-/**
- * Show/Hide loading overlay
- */
-function showLoading() {
-    if (!isLoading) {
-        isLoading = true;
-        $('#loading-overlay').removeClass('d-none');
-    }
-}
-
-function hideLoading() {
-    setTimeout(() => {
-        isLoading = false;
-        $('#loading-overlay').addClass('d-none');
-    }, 300);
-}
-
-/**
- * Format price
- */
-function formatPrice(price) {
-    return new Intl.NumberFormat('th-TH', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-    }).format(price) + ' บาท';
-}
-
-/**
- * Debounce function
- */
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-/**
- * Format number with commas
- */
-function numberWithCommas(x) {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-/**
- * Validate Thai phone number
- */
-function validateThaiPhone(phone) {
-    const cleaned = phone.replace(/[-\s]/g, '');
-    return /^[0-9]{9,10}$/.test(cleaned);
-}
-
-/**
- * Get Thai date format
- */
-function getThaiDate(date = new Date()) {
-    return date.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-/**
- * Copy text to clipboard
- */
-function copyToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-        return navigator.clipboard.writeText(text);
-    } else {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            const successful = document.execCommand('copy');
-            document.body.removeChild(textArea);
-            return successful;
-        } catch (err) {
-            document.body.removeChild(textArea);
-            return false;
-        }
-    }
-}
-
-/**
- * Local Storage Helper (with fallback)
- */
-const StorageHelper = {
-    set: function(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (e) {
-            console.warn('LocalStorage not available:', e);
-            return false;
-        }
-    },
-    
-    get: function(key, defaultValue = null) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : defaultValue;
-        } catch (e) {
-            console.warn('LocalStorage not available:', e);
-            return defaultValue;
-        }
-    },
-    
-    remove: function(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (e) {
-            console.warn('LocalStorage not available:', e);
-            return false;
-        }
-    }
-};
-
-/**
- * Image lazy loading
- */
-function initLazyLoading() {
-    const images = document.querySelectorAll('img[data-src]');
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-                imageObserver.unobserve(img);
-            }
-        });
-    });
-
-    images.forEach(img => imageObserver.observe(img));
-}
-
-/**
- * Back to top button
- */
-function initBackToTop() {
-    const backToTopBtn = $('<button>')
-        .attr('id', 'back-to-top')
-        .addClass('btn btn-primary position-fixed')
-        .css({
-            'bottom': '20px',
-            'right': '20px',
-            'z-index': '1000',
-            'border-radius': '50%',
-            'width': '50px',
-            'height': '50px',
-            'display': 'none'
-        })
-        .html('<i class="fas fa-arrow-up"></i>')
-        .appendTo('body');
-
-    $(window).scroll(function() {
-        if ($(this).scrollTop() > 300) {
-            backToTopBtn.fadeIn();
-        } else {
-            backToTopBtn.fadeOut();
-        }
-    });
-
-    backToTopBtn.click(function() {
-        $('html, body').animate({scrollTop: 0}, 800);
-        return false;
-    });
-}
-
-/**
- * Initialize on DOM ready
- */
-$(document).ready(function() {
-    initLazyLoading();
-    initBackToTop();
-});
-
-/**
- * Service Worker Registration (if available)
- */
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('SW registered: ', registration);
-            })
-            .catch(function(registrationError) {
-                console.log('SW registration failed: ', registrationError);
-            });
-    });
-}
-
-/** Cancel item from order detail
+ * Cancel order functionality
  */
 function cancelOrder(orderId) {
+    if (!confirm('คุณต้องการยกเลิกคำสั่งซื้อนี้หรือไม่?')) {
+        return;
+    }
+
     fetch(`/cancel_order/${orderId}`, {
         method: "POST",
         headers: {
@@ -699,86 +709,151 @@ function cancelOrder(orderId) {
     })
     .then(res => res.json())
     .then(data => {
-        alert(data.message);
+        showToast(data.message, data.success ? 'success' : 'error');
         if (data.success) {
-            location.reload();
+            setTimeout(() => location.reload(), 1000);
         }
     })
-    .catch(() => alert("เกิดข้อผิดพลาด"));
+    .catch(() => showToast("เกิดข้อผิดพลาด", 'error'));
 }
 
+/**
+ * Handle quick view (placeholder for future modal implementation)
+ */
+function handleQuickView(e) {
+    e.preventDefault();
+    
+    const productId = $(this).data('product-id');
+    
+    // For now, redirect to product detail page
+    // In future, could open a modal with product details
+    window.location.href = `/product/${productId}`;
+}
 
+// ===========================
+// 10. EVENT LISTENERS SETUP
+// ===========================
+
+/**
+ * Setup all event listeners
+ */
+function setupEventListeners() {
+    // Cart Management
+    $(document).on('click', '.add-to-cart', handleAddToCart);
+    $(document).on('click', '.quantity-btn', handleQuantityUpdate);
+    $(document).on('click', '.remove-from-cart', handleRemoveFromCart);
+    $('#clear-cart-btn').on('click', handleClearCart);
+    
+    // Product Interaction
+    $(document).on('click', '.quick-view', handleQuickView);
+    
+    // Search and Filter
+    $('#search-input').on('input', debounce(handleSearch, 300));
+    $(document).on('click', '.category-filter', handleCategoryFilter);
+    
+    // Navigation
+    $('a[href^="#"]').on('click', handleSmoothScroll);
+    $('.hero-cta a[href^="#"]').on('click', handleSmoothScroll);
+    
+    // Forms
+    $('form').on('submit', handleFormValidation);
+    
+    // AJAX Loading
+    $(document).on('ajaxStart', showLoading).on('ajaxStop', hideLoading);
+    
+    // Staggered animations for products
+    $('.product-card').each(function(index) {
+        $(this).css('animation-delay', (index * CONFIG.ANIMATION_DELAY) + 'ms');
+    });
+}
+
+// ===========================
+// 11. INITIALIZATION SYSTEM
+// ===========================
+
+/**
+ * Initialize the entire application
+ */
+function initializeApp() {
+    console.log('🍰 Sweet Dreams Bakery - Initializing...');
+    
+    // Core Setup
+    setupEventListeners();
+    initializeAnimations();
+    loadCartSummary();
+    
+    // UI Components
+    initLazyLoading();
+    initBackToTop();
+    updateActiveNavigation();
+    
+    // Bootstrap Components
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Auto-hide flash messages
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, CONFIG.ALERT_FADE_DELAY);
+    
+    console.log('✅ Sweet Dreams Bakery - Application Ready');
+}
+
+// ===========================
+// 12. SERVICE WORKER & PWA
+// ===========================
+
+/**
+ * Register service worker if available
+ */
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    console.log('SW registered: ', registration);
+                })
+                .catch(function(registrationError) {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        });
+    }
+}
+
+// ===========================
+// 13. GLOBAL API EXPORT
+// ===========================
 
 /**
  * Export functions for global use
  */
 window.BakeryApp = {
+    // UI Functions
     showToast,
     showLoading,
     hideLoading,
+    
+    // Utility Functions
     formatPrice,
-    updateCartBadge,
     copyToClipboard,
-    StorageHelper,
     validateThaiPhone,
-    getThaiDate
+    getThaiDate,
+    
+    // Cart Functions
+    updateCartBadge,
+    updateCartTotals,
+    
+    // Storage Helper
+    StorageHelper,
+    
+    // Order Functions
+    cancelOrder
 };
 
-$(document).ready(function() {
-    // กดปุ่มเพิ่มสินค้า
-    $('.add-to-cart').on('click', function() {
-        const btn = $(this);
-        const data = {
-            product_id: btn.data('id'),
-            name: btn.data('name'),
-            price: btn.data('price'),
-            image: btn.data('image')
-        };
-
-        $.ajax({
-            url: '/add_to_cart',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            success: function(res) {
-                if (res.success) {
-                    $('#cart-badge').text(res.total_items).show();
-                }
-            }
-        });
-    });
-});
+// ===========================
+// 14. DOCUMENT READY & INITIALIZATION
+// ===========================
 
 $(document).ready(function() {
-    // Smooth scroll for hero CTA button
-    $('.hero-cta a[href^="#"]').on('click', function(e) {
-        e.preventDefault();
-        const target = $($(this).attr('href'));
-        if (target.length) {
-            $('html, body').animate({
-                scrollTop: target.offset().top - 100
-            }, 1000);
-        }
-    });
-
-    // Add staggered animation to products
-    $('.product-card').each(function(index) {
-        $(this).css('animation-delay', (index * 0.1) + 's');
-    });
-
-    // Update active navigation
-    $(window).scroll(function() {
-        let current = '';
-        $('section[id]').each(function() {
-            const sectionTop = $(this).offset().top;
-            const sectionHeight = $(this).outerHeight();
-            if ($(window).scrollTop() >= sectionTop - 200) {
-                current = $(this).attr('id');
-            }
-        });
-        $('.nav-link').removeClass('active');
-        if (current) {
-            $(`.nav-link[href="#${current}"]`).addClass('active');
-        }
-    });
+    initializeApp();
+    registerServiceWorker();
 });

@@ -135,11 +135,7 @@
                         <a class="nav-link position-relative fw-500 cart-link" href="{{ url_for('cart') }}">
                             <i class="fas fa-shopping-cart me-1"></i>
                             <span class="d-none d-lg-inline">ตะกร้า</span>
-                            {% if cart_total_items and cart_total_items > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-badge">
-                                {{ cart_total_items }}
-                            </span>
-                            {% endif %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="cart-badge">0</span>
                         </a>
                     </li>
                     <!-- User Menu -->
@@ -157,7 +153,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('track_order') }}">
-                                        <i class="fas fa-history me-2"></i>ติดตามคำสั่งซื้อ
+                                        <i class="fas fa-truck me-2"></i>ติดตามคำสั่งซื้อ
                                     </a>
                                 </li>
                                 <li>
@@ -175,6 +171,11 @@
                                 <li>
                                     <a class="dropdown-item text-primary" href="{{ url_for('admin_orders') }}">
                                         <i class="fas fa-shopping-cart me-2"></i>จัดการคำสั่งซื้อ
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin_order_history') }}">
+                                        <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อทั้งหมด
                                     </a>
                                 </li>
                                 {% endif %}
