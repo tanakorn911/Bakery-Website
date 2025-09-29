@@ -239,23 +239,6 @@ $(document).ready(function() {
         $('#view-grid').removeClass('active');
     });
     
-    // Update results count
-    function updateResultsCount() {
-        const visibleCount = $('.product-item:visible').length;
-        const totalCount = $('.product-item').length;
-        
-        if ($('#results-count').length === 0) {
-            $('.container').append('<div id="results-count" class="text-center mt-3"></div>');
-        }
-        
-        $('#results-count').html(`
-            <p class="text-muted">
-                แสดง ${visibleCount} จาก ${totalCount} รายการ
-                ${visibleCount !== totalCount ? '(กรองแล้ว)' : ''}
-            </p>
-        `);
-    }
-    
     // Initialize
     $('#view-grid').addClass('active');
     updateResultsCount();

@@ -2,6 +2,10 @@
 
 {% block title %}Sweet Dreams Bakery - หน้าหลัก | เบเกอรี่พรีเมียมเชียงราย{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/.css') }}">
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section -->
 <section class="hero-section" id="home">
@@ -93,7 +97,7 @@
         <div class="row gy-4">
             {% for product in featured_products[:8] %}
             <div class="col-lg-3 col-md-6">
-                <div class="product-card h-100" data-category="{{ product.category_name }}">
+                <div class="product-card featured-product h-100" data-category="{{ product.category_name }}">
                     <div class="product-image clickable">
                         {% if product.image %}
                             <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
@@ -469,6 +473,55 @@ $(document).ready(function() {
     // เรียกตอนโหลดหน้า
     updateCartBadge();
 
+    // ====== Category Filter (กรองเฉพาะส่วนสินค้าทั้งหมด ไม่กระทบสินค้าแนะนำ) ======
+    $('.category-filter').on('click', function() {
+        const category = $(this).data('category');
+        $('.category-filter').removeClass('active');
+        $(this).addClass('active');
+
+        $('#featured').show();
+        $('#featured .product-card').closest('.col-lg-3').show();
+
+        // เฉพาะ section#products เท่านั้น
+        const allSections = $('#products .category-section');
+        if (category === 'all') {
+            allSections.show();
+        } else {
+            allSections.each(function() {
+                $(this).toggle($(this).data('category') === category);
+            });
+        }
+    });
+
+    // ====== Search Products (กรองเฉพาะส่วนสินค้าทั้งหมด) ======
+     $('#search-input').on('keyup', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        const allProducts = $('#products .product-card');
+
+        allProducts.each(function() {
+            const name = $(this).find('.product-name').text().toLowerCase();
+            const desc = $(this).find('.product-description').text().toLowerCase();
+            $(this).closest('.col-lg-3').toggle(name.includes(searchTerm) || desc.includes(searchTerm));
+        });
+
+        // ซ่อน category section ที่ไม่มีสินค้า
+        $('#products .category-section').each(function() {
+            const visibleProducts = $(this).find('.col-lg-3:visible').length;
+            $(this).toggle(visibleProducts > 0);
+        });
+    });
+        
+        // แสดง/ซ่อน section ที่ไม่มีสินค้า
+        $('#products .category-section').each(function() {
+            const visibleProducts = $(this).find('.col-lg-3:visible').length;
+            if (visibleProducts > 0) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
     // ====== Add to cart button ======
     $('.add-to-cart').on('click', function() {
         const productId = $(this).data('product-id');
@@ -483,10 +536,8 @@ $(document).ready(function() {
             cart.push({ id: productId, name: productName, price: productPrice, quantity: 1 });
         }
         localStorage.setItem('cart', JSON.stringify(cart));
-
-        // ✅ อัปเดต badge ทันที
         updateCartBadge();
+        alert('เพิ่ม ' + productName + ' ลงตะกร้าเรียบร้อย!');
     });
-});
 </script>
 {% endblock %}
