@@ -1670,67 +1670,54 @@ def delete_address(address_id):
     return redirect(url_for("address_book"))
 
 
-@app.route('/track_order', methods=['GET', 'POST'])
+@app.route("/track_order", methods=["GET", "POST"])
 def track_order():
-    order_data = None
-    addr = None
-    all_orders = []
-
     user_id = session.get("user_id")
+    role = session.get("role")
+
     if not user_id:
         flash("กรุณาเข้าสู่ระบบก่อน")
         return redirect(url_for("login"))
 
     conn = get_db_connection()
 
-    # ดึงคำสั่งซื้อของผู้ใช้คนนี้ (ล่าสุด 50 รายการ)
-    all_orders = conn.execute(
-        "SELECT id, created_at, status FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 50",
-        (user_id,)
-    ).fetchall()
+    if request.method == "POST":
+        order_id = request.form.get("order_id")
+        if order_id:
+            if role == "admin":
+                # admin เห็นได้ทุก order
+                order = conn.execute(
+                    "SELECT * FROM orders WHERE id=?",
+                    (order_id,)
+                ).fetchone()
+            else:
+                # user ปกติ เห็นเฉพาะของตัวเอง
+                order = conn.execute(
+                    "SELECT * FROM orders WHERE id=? AND user_id=?",
+                    (order_id, user_id)
+                ).fetchone()
 
-    if request.method == 'POST':
-        order_id = request.form['order_id']
-        order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
-        
-        if order:
-            order = dict(order)
+            conn.close()
+            if order:
+                return redirect(url_for("order_detail", order_id=order["id"]))
+            else:
+                flash("ไม่พบคำสั่งซื้อ หรือคุณไม่มีสิทธิ์ดู")
+                return redirect(url_for("track_order"))
 
-            # ตรวจสอบสิทธิ์
-            if session.get("role") != "admin":
-                if user_id != order.get("user_id"):
-                    conn.close()
-                    flash("คุณไม่มีสิทธิ์เข้าดูคำสั่งซื้อนี้")
-                    return redirect(url_for("track_order"))
+    # ถ้าไม่ค้นหา ให้โชว์รายการล่าสุดแทน
+    if role == "admin":
+        all_orders = conn.execute(
+            "SELECT * FROM orders ORDER BY created_at DESC LIMIT 20"
+        ).fetchall()
+    else:
+        all_orders = conn.execute(
+            "SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 10",
+            (user_id,)
+        ).fetchall()
 
-            # ดึงที่อยู่ล่าสุด
-            addr = conn.execute("""
-                SELECT *,
-                       address || 
-                       CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
-                       CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
-                       CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
-                       AS full_address
-                FROM addresses
-                WHERE user_id = ?
-                ORDER BY id DESC
-                LIMIT 1
-            """, (order["user_id"],)).fetchone()
-
-            # ดึง order items
-            items = conn.execute("""
-                SELECT oi.*, p.name as product_name, p.price as product_price
-                FROM order_items oi
-                JOIN products p ON oi.product_id = p.id
-                WHERE oi.order_id = ?
-            """, (order_id,)).fetchall()
-            
-            order['order_items'] = [dict(item) for item in items]
-            order_data = order
-        
     conn.close()
-    
-    return render_template('track_order.html', order=order_data, addr=addr, all_orders=all_orders)
+    return render_template("track_order.html", all_orders=all_orders)
+
 
 
 
