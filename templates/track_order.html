@@ -2,20 +2,26 @@
 
 {% block title %}ติดตามคำสั่งซื้อ{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-    <h2 class="mb-4 text-center">ติดตามคำสั่งซื้อ</h2>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/track.css') }}">
+{% endblock %}
 
-    <!-- Search Form -->
-    <form method="POST" class="mb-5">
-        <div class="input-group mx-auto" style="max-width: 500px;">
-            <input type="text" class="form-control" name="order_id" placeholder="กรอกหมายเลขคำสั่งซื้อ" required>
-            <button class="btn btn-primary" type="submit">
-                <i class="fas fa-search me-1"></i> ติดตาม
-            </button>
-        </div>
-    </form>
-    {% if all_orders %}
+{% block content %}
+<div class="track-order-page">
+    <div class="container py-5">
+        <h2 class="mb-4 text-center">ติดตามคำสั่งซื้อ</h2>
+
+        <!-- Search Form -->
+        <form method="POST" class="mb-5">
+            <div class="input-group mx-auto" style="max-width: 500px;">
+                <input type="text" class="form-control" name="order_id" placeholder="กรอกหมายเลขคำสั่งซื้อ" required>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search me-1"></i> ติดตาม
+                </button>
+            </div>
+        </form>
+
+        {% if all_orders %}
         <div class="mt-4">
             <h5>คำสั่งซื้อของคุณล่าสุด</h5>
             <ul class="list-group">
@@ -36,5 +42,6 @@
             </ul>
         </div>
         {% endif %}
+    </div>
 </div>
 {% endblock %}

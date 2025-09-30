@@ -2,10 +2,6 @@
 
 {% block title %}Sweet Dreams Bakery - หน้าหลัก | เบเกอรี่พรีเมียมเชียงราย{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/.css') }}">
-{% endblock %}
-
 {% block content %}
 <!-- Hero Section -->
 <section class="hero-section" id="home">
@@ -140,13 +136,13 @@
                                     {% endif %}
                                 </div>
                                 
-                                <div class="d-grid gap-2 mt-2">
+                                <div class="d-flex justify-content-center mt-2">
                                     <a href="{{ url_for('product_detail', product_id=product.id) }}" 
-                                    class="btn btn-outline-primary btn-sm">
+                                    class="btn btn-detail-view">
                                         <i class="fas fa-info-circle me-2"></i>
                                         ดูรายละเอียด
                                     </a>
-                        </div>                        
+                                </div>                      
                     </div>
                 </div>
             </div>
@@ -252,13 +248,13 @@
                                         </button>
                                     {% endif %}
                                 </div>
-                                <div class="d-grid gap-2 mt-2">
+                                <div class="d-flex justify-content-center mt-2">
                                     <a href="{{ url_for('product_detail', product_id=product.id) }}" 
-                                    class="btn btn-outline-primary btn-sm">
+                                    class="btn btn-detail-view">
                                         <i class="fas fa-info-circle me-2"></i>
                                         ดูรายละเอียด
                                     </a>
-                                </div>
+                                </div>  
                             </div>
                         </div>
                     </div>
@@ -473,38 +469,45 @@ $(document).ready(function() {
     // เรียกตอนโหลดหน้า
     updateCartBadge();
 
-    // ====== Category Filter (กรองเฉพาะส่วนสินค้าทั้งหมด ไม่กระทบสินค้าแนะนำ) ======
+    // ====== Category Filter (กรองเฉพาะสินค้าทั้งหมด ไม่แตะต้องสินค้าแนะนำ) ======
     $('.category-filter').on('click', function() {
         const category = $(this).data('category');
         $('.category-filter').removeClass('active');
         $(this).addClass('active');
 
-        $('#featured').show();
-        $('#featured .product-card').closest('.col-lg-3').show();
-
-        // เฉพาะ section#products เท่านั้น
+        // filter เฉพาะ .category-section และ .product-card ที่อยู่ใน #products เท่านั้น
         const allSections = $('#products .category-section');
         if (category === 'all') {
             allSections.show();
+            allSections.find('.product-card').parent().show();
         } else {
             allSections.each(function() {
-                $(this).toggle($(this).data('category') === category);
+                const isMatch = $(this).data('category') === category;
+                $(this).toggle(isMatch);
+            });
+        }
+
+        // Scroll ไปยังสินค้าทั้งหมด (products)
+        const productsSection = document.getElementById('products');
+        if (productsSection) {
+            window.scrollTo({
+                top: productsSection.offsetTop - 80,
+                behavior: 'smooth'
             });
         }
     });
 
     // ====== Search Products (กรองเฉพาะส่วนสินค้าทั้งหมด) ======
-     $('#search-input').on('keyup', function() {
+    $('#search-input').on('keyup', function() {
         const searchTerm = $(this).val().toLowerCase();
-        const allProducts = $('#products .product-card');
-
-        allProducts.each(function() {
+        // filter เฉพาะ .product-card ที่อยู่ใน #products .category-section เท่านั้น
+        $('#products .category-section .product-card').each(function() {
             const name = $(this).find('.product-name').text().toLowerCase();
             const desc = $(this).find('.product-description').text().toLowerCase();
-            $(this).closest('.col-lg-3').toggle(name.includes(searchTerm) || desc.includes(searchTerm));
+            $(this).parent().toggle(name.includes(searchTerm) || desc.includes(searchTerm));
         });
 
-        // ซ่อน category section ที่ไม่มีสินค้า
+        // ซ่อน category section ที่ไม่มีสินค้า (ใน #products เท่านั้น)
         $('#products .category-section').each(function() {
             const visibleProducts = $(this).find('.col-lg-3:visible').length;
             $(this).toggle(visibleProducts > 0);

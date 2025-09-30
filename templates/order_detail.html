@@ -1,8 +1,12 @@
 {% extends "layout.html" %}
 {% block title %}รายละเอียดคำสั่งซื้อ #{{ order.id }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/order_detail.css')}}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5 order-detail-page">
     <h4>คำสั่งซื้อ #{{ order.id }}</h4>
     <p>วันที่: {{ order.created_at | to_bangkok }} | สถานะ: 
         <span id="order-status" class="badge

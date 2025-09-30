@@ -1,0 +1,82 @@
+/* Container */
+.orders-page .container {
+    max-width: 1100px;
+}
+
+/* Heading */
+.orders-page h2 {
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.orders-page h2::before {
+    content: "\f07a"; /* fa-shopping-cart */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #8B4513;
+    font-size: 1.2em;
+}
+
+/* Table */
+.orders-page .table {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    background: #fff;
+}
+
+.orders-page .table thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.orders-page .table thead th {
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.orders-page .table tbody tr:hover {
+    background-color: #f1f7ff;
+    transition: background 0.2s ease-in-out;
+}
+
+.orders-page .table td {
+    vertical-align: middle;
+}
+
+/* Badges */
+.orders-page .badge {
+    font-size: 0.8rem;
+    padding: 0.5em 0.7em;
+    border-radius: 6px;
+}
+
+/* Buttons */
+.orders-page .btn-sm {
+    border-radius: 6px;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+}
+
+.orders-page .btn-primary {
+    background: #8B4513;
+    border: none;
+    transition: background 0.2s ease;
+}
+
+.orders-page .btn-primary:hover {
+    background: #0b5ed7;
+}
+
+/* Empty state */
+.orders-page p {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 2rem;
+}

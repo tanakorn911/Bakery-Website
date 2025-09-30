@@ -2,8 +2,12 @@
 
 {% block title %}ชำระเงิน - Sweet Dreams Bakery{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5 checkout-page">
     <h2>ชำระเงิน</h2>
 
     <form method="POST" id="checkout-form">

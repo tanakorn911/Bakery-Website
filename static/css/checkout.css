@@ -1,0 +1,71 @@
+/* =========================
+   Checkout Page
+========================= */
+.checkout-page h2 {
+    font-weight: 600;
+    color: #8B4513;
+    margin-bottom: 2rem;
+}
+
+.checkout-page form {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.checkout-page .form-control,
+.checkout-page .form-select,
+.checkout-page textarea {
+    border-radius: 8px;
+    border: 1px solid #e0d7cc;
+    padding: 0.5rem 0.75rem;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.checkout-page .form-control:focus,
+.checkout-page .form-select:focus,
+.checkout-page textarea:focus {
+    border-color: #8B4513;
+    box-shadow: 0 0 5px rgba(139,69,19,0.3);
+    outline: none;
+}
+
+.checkout-page label {
+    font-weight: 500;
+    color: #444;
+}
+
+.checkout-page button.btn-primary {
+    background: #8B4513;
+    border: none;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    transition: background 0.2s ease, transform 0.2s ease;
+    border-radius: 8px;
+}
+
+.checkout-page button.btn-primary:hover {
+    background: #a05b2c;
+    transform: translateY(-1px);
+}
+
+.checkout-page textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+#address-section {
+    transition: all 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .checkout-page form {
+        padding: 1.5rem;
+    }
+
+    .checkout-page button.btn-primary {
+        width: 100%;
+    }
+}

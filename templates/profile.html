@@ -3,167 +3,175 @@
 
 {% block title %}โปรไฟล์ - Sweet Dreams Bakery{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+<div class="profile-page">
+    <div class="container py-5">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 mb-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-user-circle fa-5x text-primary"></i>
+                        </div>
+                        <h5>{{ user.full_name or user.username }}</h5>
+                        <p class="text-muted">{{ user.email }}</p>
                     </div>
-                    <h5>{{ user.full_name or user.username }}</h5>
-                    <p class="text-muted">{{ user.email }}</p>
+                </div>
+                
+                <div class="list-group mt-3">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action active" data-tab="profile-info">
+                        <i class="fas fa-user me-2"></i>ข้อมูลส่วนตัว
+                    </a>
+                    <a href="{{ url_for('order_history') }}" class="list-group-item list-group-item-action" data-tab="order-history">
+                        <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อ
+                    </a>
+                    <a href="{{ url_for('address_book') }}" class="list-group-item list-group-item-action" data-tab="address-book">
+                        <i class="fas fa-address-book me-2"></i>ที่อยู่จัดส่ง
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action" data-tab="change-password">
+                        <i class="fas fa-lock me-2"></i>เปลี่ยนรหัสผ่าน
+                    </a>
                 </div>
             </div>
-            
-            <div class="list-group mt-3">
-                <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action active" data-tab="profile-info">
-                    <i class="fas fa-user me-2"></i>ข้อมูลส่วนตัว
-                </a>
-                <a href="{{ url_for('order_history') }}" class="list-group-item list-group-item-action" data-tab="order-history">
-                    <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อ
-                </a>
-                <a href="{{ url_for('address_book') }}" class="list-group-item list-group-item-action" data-tab="address-book">
-                    <i class="fas fa-address-book me-2"></i>ที่อยู่จัดส่ง
-                </a>
-                <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action" data-tab="change-password">
-                    <i class="fas fa-lock me-2"></i>เปลี่ยนรหัสผ่าน
-                </a>
-            </div>
-        </div>
 
-        <!-- Content -->
-        <div class="col-md-9">
-            <!-- Profile Info -->
-            <div class="tab-content active" id="profile-info">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-user text-primary me-2"></i>ข้อมูลส่วนตัว
-                        </h5>
+            <div class="mobile-tabs d-md-none">
+                <a href="#" class="active" data-tab="profile-info"><i class="fas fa-user"></i></a>
+                <a href="#" data-tab="order-history"><i class="fas fa-history"></i></a>
+                <a href="#" data-tab="address-book"><i class="fas fa-address-book"></i></a>
+                <a href="#" data-tab="change-password"><i class="fas fa-lock"></i></a>
+            </div>
+
+            <!-- Content -->
+            <div class="col-md-9">
+                <!-- Profile Info -->
+                <div class="tab-content active" id="profile-info">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user text-primary me-2"></i>ข้อมูลส่วนตัว
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/update_profile">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">ชื่อ-นามสกุล</label>
+                                        <input type="text" class="form-control" name="full_name" 
+                                               value="{{ user.full_name or '' }}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">อีเมล</label>
+                                        <input type="email" class="form-control" name="email" 
+                                               value="{{ user.email }}" readonly>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">เบอร์โทรศัพท์</label>
+                                        <input type="tel" class="form-control" name="phone" 
+                                               value="{{ user.phone or '' }}">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">วันเกิด</label>
+                                        <input type="date" class="form-control" name="birthday"
+                                        value="{{ user.birthday or '' }}">
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>บันทึกข้อมูล
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <form method="POST" action="/update_profile">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">ชื่อ-นามสกุล</label>
-                                    <input type="text" class="form-control" name="full_name" 
-                                           value="{{ user.full_name or '' }}">
+                </div>
+
+                <!-- Order History -->
+                <div class="tab-content" id="order-history">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-history text-primary me-2"></i>ประวัติการสั่งซื้อ
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if orders %}
+                                {% for order in orders %}
+                                <div class="order-item mb-4 p-3 border rounded">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">คำสั่งซื้อ #{{ order.id }}</h6>
+                                            <p class="text-muted mb-2">
+                                                วันที่: {{ order.created_at | to_bangkok }}
+                                                | สถานะ: <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' }}">{{ order.status }}</span>
+                                            </p>
+                                        </div>
+                                        <div class="text-end">
+                                            <strong>{{ "%.0f"|format(order.total_amount) }} บาท</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="order-details">
+                                        <small class="text-muted">ผู้รับ: {{ order.customer_name }}</small><br>
+                                        <small class="text-muted">เบอร์: {{ order.customer_phone }}</small>
+                                        {% if order.customer_address %}
+                                            <br><small class="text-muted">ที่อยู่: {{ order.customer_address }}</small>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="mt-2">
+                                        <a href="/order/{{ order.id }}" class="btn btn-sm btn-outline-primary">
+                                            ดูรายละเอียด
+                                        </a>
+                                        {% if order.status == 'pending' %}
+                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder({{ order.id }})">
+                                            ยกเลิก
+                                        </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">อีเมล</label>
-                                    <input type="email" class="form-control" name="email" 
-                                           value="{{ user.email }}" readonly>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-shopping-bag fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">ยังไม่มีประวัติการสั่งซื้อ</h5>
+                                    <a href="/" class="btn btn-primary mt-3">เริ่มสั่งซื้อ</a>
                                 </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">เบอร์โทรศัพท์</label>
-                                    <input type="tel" class="form-control" name="phone" 
-                                           value="{{ user.phone or '' }}">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">วันเกิด</label>
-                                    <input type="date" class="form-control" name="birthday"
-                                    value="{{ user.birthday or '' }}">
-                                </div>
-                            </div>
-                            
-                            <!-- <div class="mb-3">
-                                <label class="form-label">ที่อยู่</label>
-                                <textarea class="form-control" name="address" rows="3">{{ user.address or '' }}</textarea>
-                            </div> -->
-                            
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>บันทึกข้อมูล
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Address Book -->
+                <div class="tab-content" id="address-book">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-address-book text-primary me-2"></i>ที่อยู่จัดส่ง
+                            </h5>
+                            <button class="btn btn-sm btn-primary" onclick="addAddress()">
+                                <i class="fas fa-plus me-1"></i>เพิ่มที่อยู่
                             </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order History -->
-            <div class="tab-content" id="order-history">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-history text-primary me-2"></i>ประวัติการสั่งซื้อ
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        {% if orders %}
-                            {% for order in orders %}
-                            <div class="order-item mb-4 p-3 border rounded">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-1">คำสั่งซื้อ #{{ order.id }}</h6>
-                                        <p class="text-muted mb-2">
-                                            วันที่: {{ order.created_at | to_bangkok }}
-                                            | สถานะ: <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' }}">{{ order.status }}</span>
-                                        </p>
-                                    </div>
-                                    <div class="text-end">
-                                        <strong>{{ "%.0f"|format(order.total_amount) }} บาท</strong>
-                                    </div>
-                                </div>
-                                
-                                <div class="order-details">
-                                    <small class="text-muted">ผู้รับ: {{ order.customer_name }}</small><br>
-                                    <small class="text-muted">เบอร์: {{ order.customer_phone }}</small>
-                                    {% if order.customer_address %}
-                                        <br><small class="text-muted">ที่อยู่: {{ order.customer_address }}</small>
-                                    {% endif %}
-                                </div>
-                                
-                                <div class="mt-2">
-                                    <a href="/order/{{ order.id }}" class="btn btn-sm btn-outline-primary">
-                                        ดูรายละเอียด
-                                    </a>
-                                    {% if order.status == 'pending' %}
-                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder({{ order.id }})">
-                                        ยกเลิก
-                                    </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="text-center py-5">
-                                <i class="fas fa-shopping-bag fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">ยังไม่มีประวัติการสั่งซื้อ</h5>
-                                <a href="/" class="btn btn-primary mt-3">เริ่มสั่งซื้อ</a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Address Book -->
-            <div class="tab-content" id="address-book">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-address-book text-primary me-2"></i>ที่อยู่จัดส่ง
-                        </h5>
-                        <button class="btn btn-sm btn-primary" onclick="addAddress()">
-                            <i class="fas fa-plus me-1"></i>เพิ่มที่อยู่
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="card border-primary">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6>ที่อยู่หลัก</h6>
-                                                <p class="mb-0">{{ user.address or 'ยังไม่ได้ระบุที่อยู่' }}</p>
-                                                <span class="badge bg-primary">ค่าเริ่มต้น</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6>ที่อยู่หลัก</h6>
+                                                    <p class="mb-0">{{ user.address or 'ยังไม่ได้ระบุที่อยู่' }}</p>
+                                                    <span class="badge bg-primary">ค่าเริ่มต้น</span>
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-secondary">แก้ไข</button>
                                             </div>
-                                            <button class="btn btn-sm btn-outline-secondary">แก้ไข</button>
                                         </div>
                                     </div>
                                 </div>
@@ -171,43 +179,43 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Change Password -->
-            <div class="tab-content" id="change-password">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-lock text-primary me-2"></i>เปลี่ยนรหัสผ่าน
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="/change_password">
-                            <div class="mb-3">
-                                <label class="form-label">รหัสผ่านเดิม</label>
-                                <input type="password" class="form-control" name="current_password" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">รหัสผ่านใหม่</label>
-                                <input type="password" class="form-control" name="new_password" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
-                                <input type="password" class="form-control" name="confirm_password" required>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
-                            </button>
-                        </form>
+                <!-- Change Password -->
+                <div class="tab-content" id="change-password">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-lock text-primary me-2"></i>เปลี่ยนรหัสผ่าน
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/change_password">
+                                <div class="mb-3">
+                                    <label class="form-label">รหัสผ่านเดิม</label>
+                                    <input type="password" class="form-control" name="current_password" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">รหัสผ่านใหม่</label>
+                                    <input type="password" class="form-control" name="new_password" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+                                    <input type="password" class="form-control" name="confirm_password" required>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+            </div><!-- end col-md-9 -->
+        </div><!-- end row -->
+    </div><!-- end container -->
+</div><!-- end profile-page -->
 
 <script>
 $(document).ready(function() {
@@ -242,24 +250,78 @@ function cancelOrder(orderId) {
 function addAddress() {
     alert('ฟีเจอร์เพิ่มที่อยู่ (ยังไม่ได้ทำ)');
 }
+
+$(document).ready(function() {
+    // Tab navigation (desktop + mobile)
+    $('[data-tab]').click(function(e) {
+        e.preventDefault();
+        
+        const targetTab = $(this).attr('data-tab');
+        
+        // Update active states
+        $('[data-tab]').removeClass('active');
+        $(`[data-tab="${targetTab}"]`).addClass('active');
+        
+        $('.tab-content').removeClass('active');
+        $(`#${targetTab}`).addClass('active');
+    });
+});
+
 </script>
 
 <style>
-.tab-content {
+.profile-page .tab-content {
     display: none;
 }
-
-.tab-content.active {
+.profile-page .tab-content.active {
     display: block;
 }
-
-.order-item {
+.profile-page .order-item {
     transition: all 0.3s ease;
 }
-
-.order-item:hover {
+.profile-page .order-item:hover {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     transform: translateY(-2px);
 }
+
+/* Responsive for mobile */
+@media (max-width: 767px) {
+    .profile-page .row {
+        flex-direction: column;
+    }
+
+    /* ซ่อน sidebar */
+    .profile-page .col-md-3 {
+        display: none;
+    }
+
+    /* แสดงเมนูแท็บด้านบน */
+    .profile-page .mobile-tabs {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .profile-page .mobile-tabs a {
+        flex: 1;
+        text-align: center;
+        padding: 0.75rem;
+        font-size: 14px;
+        color: #333;
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        transition: 0.3s;
+    }
+
+    .profile-page .mobile-tabs a.active {
+        border-color: #0d6efd;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+}
+
+
 </style>
 {% endblock %}

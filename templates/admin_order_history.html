@@ -2,55 +2,69 @@
 
 {% block title %}ประวัติคำสั่งซื้อทั้งหมด{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">ประวัติคำสั่งซื้อทั้งหมด</h2>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_orders_his.css') }}">
+{% endblock %}
 
-    {% if orders %}
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>หมายเลขคำสั่งซื้อ</th>
-                <th>ผู้สั่งซื้อ</th>
-                <th>อีเมล</th>
-                <th>จำนวนเงิน (บาท)</th>
-                <th>วันที่สั่งซื้อ</th>
-                <th>สถานะ</th>
-                <th>รายละเอียด</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>#{{ order.id }}</td>
-                <td>{{ order.username }}</td>
-                <td>{{ order.email }}</td>
-                <td>{{ "%.2f"|format(order.total_amount) }}</td>
-                <td>{{ order.created_at | to_bangkok }}</td>
-                <td>
-                    {% if order.status == 'pending' %}
-                        <span class="badge bg-warning text-dark">รอดำเนินการ</span>
-                    {% elif order.status == 'processing' %}
-                        <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
-                    {% elif order.status == 'completed' %}
-                        <span class="badge bg-success text-white">เสร็จสิ้น</span>
-                    {% elif order.status == 'cancelled' %}
-                        <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
-                    {% else %}
-                        <span class="badge bg-secondary text-white">{{ order.status }}</span>
+{% block content %}
+<div class="orders-page">
+    <div class="container py-5">
+        <h2 class="mb-4">
+            {% if is_admin %}
+                รายการคำสั่งซื้อทั้งหมด
+            {% else %}
+                ประวัติคำสั่งซื้อของคุณ
+            {% endif %}
+        </h2>
+
+        {% if orders %}
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>หมายเลขคำสั่งซื้อ</th>
+                    {% if is_admin %}
+                    <th>ผู้สั่งซื้อ</th>
                     {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">
-                        ดูรายละเอียด
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>ยังไม่มีคำสั่งซื้อ</p>
-    {% endif %}
+                    <th>จำนวนเงิน (บาท)</th>
+                    <th>วันที่สั่งซื้อ</th>
+                    <th>สถานะ</th>
+                    <th>รายละเอียด</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    {% if is_admin %}
+                    <td>{{ order.username }}</td>
+                    {% endif %}
+                    <td>{{ "%.2f"|format(order.total_amount) }}</td>
+                    <td>{{ order.created_at | to_bangkok }}</td>
+                    <td>
+                        {% if order.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">รอดำเนินการ</span>
+                        {% elif order.status == 'processing' %}
+                            <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
+                        {% elif order.status == 'completed' %}
+                            <span class="badge bg-success text-white">เสร็จสิ้น</span>
+                        {% elif order.status == 'cancelled' %}
+                            <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white">{{ order.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                            ดูรายละเอียด
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>{% if is_admin %}ยังไม่มีคำสั่งซื้อใด{% else %}คุณยังไม่มีคำสั่งซื้อ{% endif %}</p>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

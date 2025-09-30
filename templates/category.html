@@ -125,11 +125,13 @@
                                 </button>
                             {% endif %}
                             
-                            <a href="{{ url_for('product_detail', product_id=product.id) }}" 
-                               class="btn btn-outline-primary">
-                                <i class="fas fa-info-circle me-2"></i>
-                                ดูรายละเอียด
-                            </a>
+                            <div class="d-flex justify-content-center mt-2">
+                                <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                                class="btn btn-detail-view">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    ดูรายละเอียด
+                                </a>
+                            </div>  
                         </div>
                     </div>
                 </div>

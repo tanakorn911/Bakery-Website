@@ -1,0 +1,119 @@
+/* =========================
+   Order Detail Page
+========================= */
+.order-detail-page h4,
+.order-detail-page h5 {
+    color: #8B4513;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    border-left: 5px solid #8B4513;
+    padding-left: 10px;
+}
+
+.order-detail-page p {
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.order-detail-page .badge {
+    font-size: 0.85rem;
+    padding: 0.45em 0.7em;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.order-detail-page table {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    background: #fff;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.order-detail-page table th,
+.order-detail-page table td {
+    vertical-align: middle;
+    padding: 0.75rem 1rem;
+}
+
+.order-detail-page table thead {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.order-detail-page table tbody tr {
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.order-detail-page table tbody tr:hover {
+    background: #fdf5e6;
+    transform: translateY(-2px);
+}
+
+.order-detail-page table tfoot {
+    background: #f1f3f5;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.order-detail-page .btn-secondary,
+.order-detail-page .btn-danger {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    padding: 0.45rem 0.9rem;
+}
+
+.order-detail-page .btn-secondary {
+    background: #6c757d;
+    border: none;
+    color: #fff;
+}
+
+.order-detail-page .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.order-detail-page .btn-danger {
+    background: #dc3545;
+    border: none;
+    color: #fff;
+}
+
+.order-detail-page .btn-danger:hover {
+    background: #b52b2b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Flex container for buttons */
+.order-detail-page .d-flex {
+    margin-top: 2rem;
+    gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .order-detail-page table th,
+    .order-detail-page table td {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .order-detail-page .d-flex {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .order-detail-page .d-flex a,
+    .order-detail-page .d-flex .btn-danger {
+        width: 100%;
+        text-align: center;
+    }
+}

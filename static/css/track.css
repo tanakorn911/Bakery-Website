@@ -1,0 +1,56 @@
+/* Track Order Page */
+.track-order-page .container {
+    max-width: 700px;
+}
+
+/* Heading */
+.track-order-page h2 {
+    font-weight: 600;
+    color: #333;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.track-order-page h2::before {
+    content: "\f002"; /* fa-search icon */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #8B4513;
+    font-size: 1.2em;
+}
+
+/* Search input */
+.track-order-page .input-group input {
+    border-radius: 6px 0 0 6px;
+    box-shadow: none;
+}
+
+.track-order-page .input-group .btn-primary {
+    background: #8B4513;
+    border: none;
+    transition: background 0.2s ease;
+    border-radius: 0 6px 6px 0;
+}
+
+.track-order-page .input-group .btn-primary:hover {
+    background: #0b5ed7;
+}
+
+/* Latest orders */
+.track-order-page h5 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #444;
+}
+
+.track-order-page .list-group-item {
+    border-radius: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: background 0.2s ease;
+}
+
+.track-order-page .list-group-item:hover {
+    background: #f8f9fa;
+}

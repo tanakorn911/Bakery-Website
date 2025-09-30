@@ -948,18 +948,17 @@ def admin():
         ORDER BY p.created_at DESC
     """).fetchall()
     categories = get_categories()
-    stats = conn.execute("""
-        SELECT 
-            (SELECT COUNT(*) FROM products) as total_products,
-            (SELECT COUNT(*) FROM orders WHERE date(created_at) = date('now')) as today_orders,
-            (SELECT COUNT(*) FROM users WHERE role = 'customer') as total_users,
-            (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE date(created_at) = date('now')) as today_revenue
-    """).fetchone()
+    orders_today = conn.execute("SELECT COUNT(*) FROM orders WHERE date(created_at) = date('now') AND status != 'cancelled'").fetchone()[0]
+    new_users_today = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'customer' AND date(created_at) = date('now')").fetchone()[0]
+    # ยอดขายวันนี้นับเฉพาะ order ที่เสร็จสิ้น
+    revenue_today = conn.execute("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE date(created_at) = date('now') AND status = 'completed'").fetchone()[0]
     conn.close()
     return render_template('admin.html', 
                          products=products, 
                          categories=categories,
-                         stats=stats)
+                         orders_today=orders_today,
+                         new_users_today=new_users_today,
+                         revenue_today=revenue_today)
 
 @app.route('/admin/orders')
 def admin_orders():
@@ -1377,6 +1376,20 @@ def delete_product(product_id):
     conn.close()
     return jsonify({'success': True})
 
+@app.route('/admin/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
+    if session.get('role') != 'admin':
+        flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
+        return redirect(url_for("index"))
+    
+    try:
+        conn = get_db_connection()
+        conn.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
 
 @app.route('/admin/toggle_product_status/<int:product_id>', methods=['POST'])
 def toggle_product_status(product_id):

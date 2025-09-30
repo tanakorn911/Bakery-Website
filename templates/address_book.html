@@ -1,10 +1,15 @@
 {% extends "layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
-    <h2>Address Book</h2>
-    <a href="{{ url_for('add_address') }}" class="btn btn-primary mb-3">เพิ่มที่อยู่ใหม่</a>
+    <h2 class="address-book-title">สมุดที่อยู่</h2>
+    <a href="{{ url_for('add_address') }}" class="btn btn-primary address-book-add-btn">เพิ่มที่อยู่ใหม่</a>
 
-    <table class="table table-bordered">
+    <table class="table table-bordered address-book-table">
         <thead>
             <tr>
                 <th>ชื่อผู้รับ</th>
@@ -33,7 +38,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7">ยังไม่มีที่อยู่</td></tr>
+            <tr><td colspan="7" class="address-book-empty">ยังไม่มีที่อยู่</td></tr>
             {% endfor %}
         </tbody>
     </table>
