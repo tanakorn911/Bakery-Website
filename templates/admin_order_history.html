@@ -2,12 +2,16 @@
 
 {% block title %}ประวัติคำสั่งซื้อทั้งหมด{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
-    <h2 class="mb-4">ประวัติคำสั่งซื้อทั้งหมด</h2>
+    <h2 class="admin-order-history-title">ประวัติคำสั่งซื้อทั้งหมด</h2>
 
     {% if orders %}
-    <table class="table table-striped align-middle">
+    <table class="table admin-order-history-table align-middle">
         <thead>
             <tr>
                 <th>หมายเลขคำสั่งซื้อ</th>
@@ -29,15 +33,15 @@
                 <td>{{ order.created_at | to_bangkok }}</td>
                 <td>
                     {% if order.status == 'pending' %}
-                        <span class="badge bg-warning text-dark">รอดำเนินการ</span>
+                        <span class="admin-order-history-badge bg-warning">รอดำเนินการ</span>
                     {% elif order.status == 'processing' %}
-                        <span class="badge bg-info text-white">กำลังจัดเตรียม</span>
+                        <span class="admin-order-history-badge bg-info">กำลังจัดเตรียม</span>
                     {% elif order.status == 'completed' %}
-                        <span class="badge bg-success text-white">เสร็จสิ้น</span>
+                        <span class="admin-order-history-badge bg-success">เสร็จสิ้น</span>
                     {% elif order.status == 'cancelled' %}
-                        <span class="badge bg-danger text-white">ยกเลิกแล้ว</span>
+                        <span class="admin-order-history-badge bg-danger">ยกเลิกแล้ว</span>
                     {% else %}
-                        <span class="badge bg-secondary text-white">{{ order.status }}</span>
+                        <span class="admin-order-history-badge bg-secondary">{{ order.status }}</span>
                     {% endif %}
                 </td>
                 <td>

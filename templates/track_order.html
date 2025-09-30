@@ -2,6 +2,10 @@
 
 {% block title %}ติดตามคำสั่งซื้อ{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <h2 class="mb-4 text-center">ติดตามคำสั่งซื้อ</h2>

@@ -6,54 +6,41 @@
 {% endblock %}
 
 {% block content %}
+
 <div class="container-fluid admin-container">
     <div class="admin-header">
-        <h1 class="mb-3">
-            <i class="fas fa-tachometer-alt me-3"></i>
-            ระบบจัดการ Sweet Dreams Bakery
-        </h1>
-        <p class="lead mb-0">จัดการสินค้า คำสั่งซื้อ และข้อมูลร้านค้า </p>
+        <h1><i class="fas fa-tachometer-alt me-3"></i> ระบบจัดการ Sweet Dreams Bakery</h1>
+        <p class="lead">จัดการสินค้า คำสั่งซื้อ และข้อมูลร้านค้า</p>
     </div>
 
     <!-- Statistics Cards -->
     <div class="admin-stats">
-        <div class="row gy-4">
-            <div class="col-lg-3 col-md-6">
+        <div class="row gy-4 justify-content-center">
+            <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                 <div class="stat-card stat-products">
-                    <div class="stat-icon">
-                        <i class="fas fa-box"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-box"></i></div>
                     <div class="stat-number">{{ products|length }}</div>
                     <div class="stat-label">สินค้าทั้งหมด</div>
                 </div>
             </div>
-            
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                 <div class="stat-card stat-orders">
-                    <div class="stat-icon">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-number">0</div>
+                    <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                    <div class="stat-number">{{ orders_today|default(0) }}</div>
                     <div class="stat-label">คำสั่งซื้อวันนี้</div>
                 </div>
             </div>
-            
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                 <div class="stat-card stat-users">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number">0</div>
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-number">{{ new_users_today|default(0) }}</div>
                     <div class="stat-label">สมาชิกใหม่</div>
                 </div>
             </div>
-            
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                 <div class="stat-card stat-revenue">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-number">฿0</div>
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-number">฿{{ revenue_today|default(0) }}</div>
                     <div class="stat-label">ยอดขายวันนี้</div>
                 </div>
             </div>
@@ -157,16 +144,15 @@
 
     <!-- Products Management -->
     <div class="products-section">
-        <div class="section-header">
-            <div class="d-flex justify-content-between align-items-center mb-4 w-100">
-            <h3 class="mb-0">
-                <i class="fas fa-boxes text-primary me-2"></i>
-                จัดการสินค้า
-            </h3>
-            <button class="btn btn-primary" id="show-add-form">
-                <i class="fas fa-plus me-2"></i>เพิ่มสินค้าใหม่
+        <div class="section-header d-flex justify-content-between align-items-center flex-wrap py-3 px-4" style="border-bottom: 2px solid #e9ecef;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-boxes text-primary" style="font-size:1.5rem;"></i>
+                <span class="fw-bold" style="font-size:1.35rem; letter-spacing:0.5px; color: var(--primary-color);">จัดการสินค้า</span>
+            </div>
+            <button class="btn btn-primary d-flex align-items-center gap-2 px-4 py-2 fw-bold shadow-sm" id="show-add-form" style="font-size:1.08rem; border-radius: 1.5rem;">
+                <i class="fas fa-plus"></i>
+                เพิ่มสินค้าใหม่
             </button>
-        </div>
         </div>
 
         <div class="table-responsive">

@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response, send_file
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -948,18 +949,19 @@ def admin():
         ORDER BY p.created_at DESC
     """).fetchall()
     categories = get_categories()
-    stats = conn.execute("""
-        SELECT 
-            (SELECT COUNT(*) FROM products) as total_products,
-            (SELECT COUNT(*) FROM orders WHERE date(created_at) = date('now')) as today_orders,
-            (SELECT COUNT(*) FROM users WHERE role = 'customer') as total_users,
-            (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE date(created_at) = date('now')) as today_revenue
-    """).fetchone()
+    # --- เพิ่มสถิติรายวัน ---
+    # นับเฉพาะ order ที่ไม่ถูกยกเลิก
+    orders_today = conn.execute("SELECT COUNT(*) FROM orders WHERE date(created_at) = date('now') AND status != 'cancelled'").fetchone()[0]
+    new_users_today = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'customer' AND date(created_at) = date('now')").fetchone()[0]
+    # ยอดขายวันนี้นับเฉพาะ order ที่เสร็จสิ้น
+    revenue_today = conn.execute("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE date(created_at) = date('now') AND status = 'completed'").fetchone()[0]
     conn.close()
     return render_template('admin.html', 
                          products=products, 
                          categories=categories,
-                         stats=stats)
+                         orders_today=orders_today,
+                         new_users_today=new_users_today,
+                         revenue_today=revenue_today)
 
 @app.route('/admin/orders')
 def admin_orders():
@@ -1567,7 +1569,7 @@ def order_history():
     return render_template("order_history.html", orders=orders, is_admin=is_admin)
 
 @app.template_filter('datetimeformat')
-def datetimeformat(value, format='%d/%m/%Y %H:%M'):
+def datetimeformat(value, format='%d/%m/%Y'):
     try:
         dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
         return dt.strftime(format)
@@ -1737,6 +1739,32 @@ def datetimeformat(value, format='%d/%m/%Y'):
         return value.strftime(format)
     return value
 
+# ========================
+# Admin Delete Order API
+# ========================
+
+@app.route('/admin/delete_order/<int:order_id>', methods=['DELETE'])
+def admin_delete_order(order_id):
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'}), 403
+    conn = get_db_connection()
+    try:
+        # ตรวจสอบว่ามี order นี้จริง
+        order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
+        if not order:
+            conn.close()
+            return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'}), 404
+        # ลบ order_items ก่อน
+        conn.execute('DELETE FROM order_items WHERE order_id = ?', (order_id,))
+        # ลบ order หลัก
+        conn.execute('DELETE FROM orders WHERE id = ?', (order_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'}), 500
 # ========================
 # Initialize Application
 # ========================

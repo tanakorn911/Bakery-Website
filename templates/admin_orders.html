@@ -9,9 +9,9 @@
 {% block content %}
 <div class="container-fluid admin-container">
     <!-- Header -->
-    <div class="admin-header">
-        <h1 class="admin-title mb-3">
-            <i class="fas fa-shopping-cart me-3"></i>จัดการคำสั่งซื้อ
+    <div class="admin-header d-flex flex-column align-items-center">
+        <h1 class="admin-orders-title mb-3">
+            <i class="fas fa-shopping-cart me-3 "></i>จัดการคำสั่งซื้อ
         </h1>
         <p class="lead mb-0">ตรวจสอบและจัดการคำสั่งซื้อทั้งหมด</p>
     </div>
@@ -68,16 +68,16 @@
 
         <div class="table-responsive">
             {% if orders %}
-            <table class="table table-hover products-table align-middle">
+            <table class="table table-hover admin-orders-table align-middle">
                 <thead>
                     <tr>
                         <th width="80">คำสั่งซื้อ</th>
-                        <th>ลูกค้า</th>
+                        <th width="500">ลูกค้า</th>
                         <th width="100">จำนวนรายการ</th>
                         <th width="120">ยอดรวม</th>
                         <th width="100">สถานะ</th>
                         <th width="150">วันที่</th>
-                        <th width="180">การจัดการ</th>
+                        <th width="220">การจัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,20 +89,20 @@
                             <small class="text-muted">{{ order.customer_phone }}</small>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-light text-dark">{{ order.item_count }} รายการ</span>
+                            <span class="admin-orders-badge bg-light text-dark">{{ order.item_count }} รายการ</span>
                         </td>
                         <td class="fw-600 text-primary">
                             {{ "{:,.0f}".format(order.total_amount) }} ฿
                         </td>
                         <td>
                             {% if order.status == 'pending' %}
-                                <span class="status-badge bg-warning text-dark" data-bs-toggle="tooltip" title="รอดำเนินการ">รอดำเนินการ</span>
+                                <span class="admin-orders-badge bg-warning" data-bs-toggle="tooltip" title="รอดำเนินการ">รอดำเนินการ</span>
                             {% elif order.status == 'processing' %}
-                                <span class="status-badge bg-info text-white" data-bs-toggle="tooltip" title="กำลังจัดเตรียม">กำลังจัดเตรียม</span>
+                                <span class="admin-orders-badge bg-info" data-bs-toggle="tooltip" title="กำลังจัดเตรียม">กำลังจัดเตรียม</span>
                             {% elif order.status == 'completed' %}
-                                <span class="status-badge bg-success text-white" data-bs-toggle="tooltip" title="เสร็จสิ้น">เสร็จสิ้น</span>
+                                <span class="admin-orders-badge bg-success" data-bs-toggle="tooltip" title="เสร็จสิ้น">เสร็จสิ้น</span>
                             {% elif order.status == 'cancelled' %}
-                                <span class="status-badge bg-danger text-white" data-bs-toggle="tooltip" title="ยกเลิกแล้ว">ยกเลิกแล้ว</span>
+                                <span class="admin-orders-badge bg-danger" data-bs-toggle="tooltip" title="ยกเลิกแล้ว">ยกเลิกแล้ว</span>
                             {% endif %}
                         </td>
                         <td>
@@ -121,6 +121,8 @@
                                 {% endif %}
 
                                 <button class="btn btn-outline-secondary btn-action" onclick="printOrder({{ order.id }})" data-bs-toggle="tooltip" title="พิมพ์"><i class="fas fa-print"></i></button>
+
+                                <button class="btn btn-outline-danger btn-action btn-delete-order ms-1" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="ลบคำสั่งซื้อ"><i class="fas fa-trash-alt"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -134,6 +136,25 @@
                 <p class="text-muted">คำสั่งซื้อจะแสดงที่นี่เมื่อมีลูกค้าสั่งซื้อ</p>
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Order Modal -->
+<div class="modal fade" id="deleteOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ยืนยันการลบคำสั่งซื้อ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>คุณแน่ใจหรือไม่ว่าต้องการ <span class="text-danger fw-bold">ลบคำสั่งซื้อ #<span id="deleteOrderId"></span></span> นี้?<br>การลบนี้จะไม่สามารถกู้คืนได้</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button class="btn btn-danger" id="confirmDeleteOrder">ลบคำสั่งซื้อ</button>
+            </div>
         </div>
     </div>
 </div>
@@ -168,6 +189,37 @@ $(document).ready(function() {
         const status = $(this).val();
         if(status === '') $('tbody tr').show();
         else $('tbody tr').hide().filter(`[data-status="${status}"]`).show();
+    });
+
+    // Delete order button
+    let orderToDelete = null;
+    $(document).on('click', '.btn-delete-order', function() {
+        orderToDelete = $(this).data('order-id');
+        $('#deleteOrderId').text(orderToDelete);
+        $('#deleteOrderModal').modal('show');
+    });
+
+    $('#confirmDeleteOrder').click(function() {
+        if(!orderToDelete) return;
+        const row = $(`tr[data-order-id="${orderToDelete}"]`);
+        $(this).prop('disabled', true).text('กำลังลบ...');
+        $.ajax({
+            url: `/admin/delete_order/${orderToDelete}`,
+            type: 'DELETE',
+            success: function(resp){
+                if(resp.success){
+                    row.fadeOut(400, function(){ $(this).remove(); updateStats(); });
+                    $('#deleteOrderModal').modal('hide');
+                }else{
+                    alert(resp.message || 'เกิดข้อผิดพลาด');
+                }
+            },
+            error: function(){ alert('เกิดข้อผิดพลาด'); },
+            complete: function(){
+                $('#confirmDeleteOrder').prop('disabled', false).text('ลบคำสั่งซื้อ');
+                orderToDelete = null;
+            }
+        });
     });
 });
 
@@ -219,7 +271,8 @@ function updateOrderStatus(orderId, newStatus) {
 
 function updateActionButtons(row, status){
     let buttons = `<button class="btn btn-outline-primary btn-action" onclick="viewOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="ดูรายละเอียด"><i class="fas fa-eye"></i></button>
-                   <button class="btn btn-outline-secondary btn-action" onclick="printOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="พิมพ์"><i class="fas fa-print"></i></button>`;
+                   <button class="btn btn-outline-secondary btn-action" onclick="printOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="พิมพ์"><i class="fas fa-print"></i></button>
+                   <button class="btn btn-outline-danger btn-action btn-delete-order ms-1" data-order-id="${row.data('order-id')}" data-bs-toggle="tooltip" title="ลบคำสั่งซื้อ"><i class="fas fa-trash-alt"></i></button>`;
     if(status=='pending'){
         buttons = `<button class="btn btn-outline-success btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'processing')" data-bs-toggle="tooltip" title="รับออเดอร์"><i class="fas fa-check"></i></button>
                    <button class="btn btn-outline-danger btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'cancelled')" data-bs-toggle="tooltip" title="ยกเลิกออเดอร์"><i class="fas fa-times"></i></button>` + buttons;

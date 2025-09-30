@@ -1,6 +1,10 @@
 {% extends "layout.html" %}
 {% block title %}รายละเอียดคำสั่งซื้อ #{{ order.id }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <h4>คำสั่งซื้อ #{{ order.id }}</h4>

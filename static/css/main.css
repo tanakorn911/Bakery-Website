@@ -1,3 +1,143 @@
+/* ปุ่มดูรายละเอียดสินค้าในหมวดหมู่ (category) */
+.btn-detail-view {
+    background: #8B4513;
+    color: #fff;
+    border: none;
+    font-weight: 500;
+        border-radius: 1.5rem;
+        padding: 0.4rem 0;
+        font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(139,69,19,0.08);
+    transition: all 0.18s;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    width: 100%;
+        margin-top: 0.5rem;
+}
+.btn-detail-view:hover, .btn-detail-view:focus {
+    background: #A0522D;
+    color: #fff;
+    transform: translateY(-1.5px) scale(1.03);
+    box-shadow: 0 3px 8px rgba(139,69,19,0.13);
+    text-decoration: none;
+}
+/* =============================
+   Admin Dashboard Styles
+   ============================= */
+.admin-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2.5rem;
+}
+.admin-header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
+    margin-bottom: 0.7rem;
+    text-align: center;
+}
+.admin-header .lead {
+    color: #7a5c3a;
+    font-size: 1.15rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.admin-stats {
+    margin-bottom: 2.5rem;
+}
+.stat-card {
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 2.2rem 1.2rem 1.5rem 1.2rem;
+    text-align: center;
+    position: relative;
+    transition: var(--transition);
+    border-top: 4px solid var(--secondary-color);
+    min-height: 170px;
+}
+.stat-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-6px) scale(1.03);
+}
+.stat-icon {
+    width: 54px;
+    height: 54px;
+    background: var(--gradient-secondary);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    margin: 0 auto 1.1rem auto;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.stat-card:hover .stat-icon {
+    transform: scale(1.12) rotateY(180deg);
+}
+.stat-number {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.5px;
+}
+.stat-label {
+    color: #7a5c3a;
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+@media (max-width: 992px) {
+    .stat-card {
+        padding: 1.5rem 0.7rem 1.1rem 0.7rem;
+        min-height: 140px;
+    }
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.2rem;
+        margin-bottom: 0.7rem;
+    }
+    .stat-number {
+        font-size: 1.3rem;
+    }
+    .stat-label {
+        font-size: 0.97rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .admin-header h1 {
+        font-size: 1.2rem;
+    }
+    .stat-card {
+        padding: 1rem 0.3rem 0.7rem 0.3rem;
+        min-height: 100px;
+    }
+    .stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+    .stat-number {
+        font-size: 1.05rem;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+    }
+}
 /* ===========================================
    Sweet Dreams Bakery - Main CSS
    Bootstrap 5.0.2 Compatible
@@ -114,18 +254,94 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Logo Styles */
-.logo-circle {
-    width: 45px;
-    height: 45px;
-    background: var(--gradient-secondary);
-    border-radius: 50%;
+
+/* --- Frameless Checkout & Form Section --- */
+.checkout-card, .form-custom {
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2.5rem 0 2rem 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: none;
+    position: static;
+@media (max-width: 900px) {
+    .checkout-card, .form-custom { padding: 1.2rem 0.5rem; }
+}
+@media (max-width: 600px) {
+    .checkout-card, .form-custom { padding: 0.7rem 0.1rem; }
+    .checkout-title, .address-form-title { font-size: 1.1rem; }
+}
+}
+
+.checkout-title, .address-form-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin-bottom: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 20px;
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
+    gap: 0.7rem;
+}
+.checkout-title i, .address-form-title i {
+    color: var(--secondary-color);
+    font-size: 2.1rem;
+    filter: drop-shadow(0 2px 6px #f4d03f44);
+}
+
+.checkout-form .form-label, .form-custom .form-label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.3rem;
+    font-size: 1.07rem;
+}
+.checkout-form .form-control, .checkout-form .form-select, .form-custom .form-control {
+    border-radius: 12px;
+    border: 1.2px solid #e8d5a3;
+    background: #fffdfa;
+    font-size: 1.07rem;
+    padding: 0.7rem 1.1rem;
+    box-shadow: none;
+    transition: border-color 0.2s;
+}
+.checkout-form .form-control:focus, .checkout-form .form-select:focus, .form-custom .form-control:focus {
+    border-color: var(--secondary-color);
+    background: #fffbe6;
+}
+.checkout-form textarea.form-control, .form-custom textarea.form-control {
+    min-height: 56px;
+    resize: vertical;
+}
+.checkout-form .btn-primary, .form-custom .btn-primary {
+    background: var(--gradient-primary);
+    border: none;
+    font-weight: 600;
+    font-size: 1.13rem;
+    padding: 0.7rem 2.2rem;
+    border-radius: 2rem;
+    box-shadow: 0 2px 8px rgba(139,69,19,0.10);
+    letter-spacing: 0.3px;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    width: 100%;
+    margin-top: 0.7rem;
+}
+.checkout-form .btn-primary:hover, .form-custom .btn-primary:hover {
+    background: linear-gradient(135deg, #A0522D, var(--primary-color));
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 4px 16px rgba(139,69,19,0.18);
+}
+
+
+@media (max-width: 900px) {
+    .checkout-card, .form-custom { padding: 1.2rem 0.5rem; }
+}
+@media (max-width: 600px) {
+    .checkout-card, .form-custom { padding: 0.7rem 0.1rem; }
+    .checkout-title, .address-form-title { font-size: 1.1rem; }
 }
 
 .logo-circle:hover {
@@ -174,6 +390,9 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-md);
     animation: fadeInUp 0.3s ease;
+        align-items: center;
+        justify-content: center;
+        color: white;
 }
 
 .dropdown-item {
@@ -182,6 +401,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dropdown-item:hover {
+.form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
     background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(244, 208, 63, 0.1));
     color: var(--primary-color);
 }
@@ -737,5 +959,205 @@ h1, h2, h3, h4, h5, h6 {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+}
+
+/* =============================
+   Address Book Page Styles
+   ============================= */
+.address-book-table {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.address-book-table th {
+    background: var(--gradient-light);
+    color: var(--primary-color);
+    font-weight: 600;
+    border-bottom: 2px solid #e9ecef;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.address-book-table td {
+    vertical-align: middle;
+    text-align: center;
+    background: #fff;
+    font-size: 1rem;
+}
+
+.address-book-table tbody tr:hover {
+    background: #f8f9fa;
+    transition: var(--transition-fast);
+}
+
+.address-book-table .btn {
+    min-width: 70px;
+    font-size: 0.95rem;
+    padding: 6px 14px;
+    border-radius: var(--border-radius-sm);
+    margin: 2px 0;
+}
+
+.address-book-table .btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ffe082);
+    color: #856404;
+    border: none;
+}
+.address-book-table .btn-warning:hover {
+    background: linear-gradient(135deg, #ffe082, #ffc107);
+    color: #fff;
+}
+.address-book-table .btn-danger {
+    background: linear-gradient(135deg, #dc3545, #ff6f61);
+    color: #fff;
+    border: none;
+}
+.address-book-table .btn-danger:hover {
+    background: linear-gradient(135deg, #ff6f61, #dc3545);
+    color: #fff;
+}
+
+.address-book-empty {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.address-book-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.address-book-add-btn {
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    border-radius: var(--border-radius-sm);
+}
+
+/* =============================
+   Address Form Page Styles
+   ============================= */
+.address-form-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.address-form-btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+}
+
+/* =============================
+   Address Form Page Styles - Simple & Themed
+   ============================= */
+.form-custom {
+    background: #fff;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 2rem 1.5rem;
+    max-width: 420px;
+    margin: 0 auto;
+    border: 1px solid #f4e4bc;
+}
+
+.address-form-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.form-custom .mb-3 {
+    margin-bottom: 1.1rem !important;
+}
+
+.form-custom .form-label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.3rem;
+    font-size: 1.05rem;
+}
+
+.form-custom .form-control {
+    border-radius: var(--border-radius-sm);
+    border: 1.2px solid #e8d5a3;
+    background: #fffdfa;
+    font-size: 1.05rem;
+    padding: 0.65rem 1rem;
+    box-shadow: none;
+    transition: border-color 0.2s;
+}
+.form-custom .form-control:focus {
+    border-color: var(--secondary-color);
+    background: #fffbe6;
+}
+
+.form-custom textarea.form-control {
+    min-height: 56px;
+    resize: vertical;
+}
+
+.address-form-btn-group {
+    margin-top: 1.5rem;
+    justify-content: center;
+}
+.address-form-btn-group .btn-primary {
+    background: var(--gradient-primary);
+    border: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 0.65rem 2rem;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    letter-spacing: 0.3px;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.address-form-btn-group .btn-primary:hover {
+    background: linear-gradient(135deg, #A0522D, var(--primary-color));
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: var(--shadow-md);
+}
+.address-form-btn-group .btn-secondary {
+    background: #f8f9fa;
+    color: var(--primary-color);
+    border: 1.2px solid var(--primary-color);
+    font-weight: 500;
+    font-size: 1.05rem;
+    padding: 0.65rem 2rem;
+    border-radius: var(--border-radius-lg);
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.address-form-btn-group .btn-secondary:hover {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+@media (max-width: 600px) {
+    .form-custom {
+        padding: 1rem 0.5rem;
+        max-width: 420px;
+    }
+    .address-form-title {
+        font-size: 1.2rem;
+    }
+    .address-form-btn-group .btn-primary,
+    .address-form-btn-group .btn-secondary {
+        padding: 0.5rem 1rem;
+        font-size: 0.95rem;
     }
 }
