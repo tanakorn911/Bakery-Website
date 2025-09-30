@@ -1,6 +1,11 @@
 {% extends "layout.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5 address-book-container">
     <h2>Address Book</h2>
     <a href="{{ url_for('add_address') }}" class="btn btn-primary mb-3">เพิ่มที่อยู่ใหม่</a>
 

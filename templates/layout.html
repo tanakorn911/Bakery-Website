@@ -343,6 +343,7 @@
     {% if session.get('role') == 'admin' %}
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     {% endif %}
+    
     <!-- Additional JavaScript -->
     {% block extra_js %}{% endblock %}
 
