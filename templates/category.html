@@ -2,19 +2,14 @@
 
 {% block title %}{{ category_name }} - Sweet Dreams Bakery{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-{% endblock %}
-
 {% block content %}
 <div class="container py-5">
     <!-- Category Header -->
     <div class="row mb-5">
         <div class="col-12">
-            <div class="bg-gradient-light rounded p-4 text-center shadow-custom animate-fade-in-up" style="border: 2.5px solid #e8d5a3;">
-                <h1 class="display-4 fw-bold text-gradient mb-2" style="letter-spacing:1.5px;">{{ category_name }}</h1>
-                <div class="mx-auto mb-3" style="width: 60px; height: 4px; background: var(--secondary-color); border-radius: 2px;"></div>
-                <p class="lead text-muted mb-0" style="font-size:1.25rem;">เลือกสินค้าคุณภาพจากหมวดหมู่ <span class="fw-bold text-primary">{{ category_name }}</span></p>
+            <div class="bg-gradient-light rounded p-4 text-center">
+                <h1 class="display-5 mb-3">{{ category_name }}</h1>
+                <p class="lead text-muted mb-0">เลือกสินค้าคุณภาพจากหมวดหมู่ {{ category_name }}</p>
             </div>
         </div>
     </div>
@@ -69,7 +64,7 @@
                  data-name="{{ product.name }}" 
                  data-price="{{ product.price }}">
                 <div class="product-card h-100">
-                    <div class="product-image">
+                    <div class="product-image position-relative">
                         {% if product.image %}
                             <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
                                  alt="{{ product.name }}" 
@@ -78,89 +73,74 @@
                         {% else %}
                             <i class="fas fa-birthday-cake"></i>
                         {% endif %}
-                        
+
                         {% if product.is_featured %}
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning">
+                            <span class="badge bg-warning position-absolute top-0 start-0 m-2">
                                 <i class="fas fa-star me-1"></i>แนะนำ
                             </span>
-                        </div>
                         {% endif %}
-                        
+
                         {% if product.stock_quantity <= 5 and product.stock_quantity > 0 %}
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-warning text-dark">
+                            <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">
                                 เหลือน้อย
                             </span>
-                        </div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="product-body">
-                        <div class="product-category">{{ category_name }}</div>
-                        <h5 class="product-name">{{ product.name }}</h5>
-                        
-                        {% if product.description %}
-                            <p class="product-description">{{ product.description }}</p>
-                        {% endif %}
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="product-price">{{ "%.0f"|format(product.price) }} บาท</div>
-                            
+                        <!-- Category + Stock -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="product-category">{{ category_name }}</div>
                             {% if product.stock_quantity > 0 %}
                                 <small class="text-muted">คงเหลือ {{ product.stock_quantity }} ชิ้น</small>
                             {% else %}
                                 <small class="text-danger">สินค้าหมด</small>
                             {% endif %}
                         </div>
-                        
-                        <div class="d-grid gap-2">
+
+                        <h5 class="product-name">{{ product.name }}</h5>
+
+                        {% if product.description %}
+                            <p class="product-description">{{ product.description }}</p>
+                        {% endif %}
+
+                        <!-- Price + Add to Cart -->
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <div class="product-price">{{ "%.0f"|format(product.price) }} บาท</div>
                             {% if product.stock_quantity > 0 %}
-                                <button class="btn btn-custom add-to-cart"
+                                <button class="btn btn-custom btn-sm add-to-cart"
                                         data-product-id="{{ product.id }}"
                                         data-product-name="{{ product.name }}"
                                         data-product-price="{{ product.price }}">
-                                    <i class="fas fa-cart-plus me-2"></i>
-                                    เพิ่มลงตะกร้า
+                                    <i class="fas fa-cart-plus"></i> เพิ่มลงตะกร้า
                                 </button>
                             {% else %}
-                                <button class="btn btn-secondary" disabled>
-                                    <i class="fas fa-times me-2"></i>
-                                    สินค้าหมด
+                                <button class="btn btn-secondary btn-sm" disabled>
+                                    <i class="fas fa-times"></i> หมด
                                 </button>
                             {% endif %}
-<<<<<<< HEAD
-                            
-                            <div class="d-flex justify-content-center mt-2">
-                                <a href="{{ url_for('product_detail', product_id=product.id) }}" 
-                                class="btn btn-detail-view">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    ดูรายละเอียด
-                                </a>
-                            </div>  
-=======
                         </div>
+
                         <div class="d-flex justify-content-center mt-2">
                             <a href="{{ url_for('product_detail', product_id=product.id) }}" 
                                class="btn btn-detail-view">
                                 <i class="fas fa-info-circle me-2"></i>
                                 ดูรายละเอียด
                             </a>
->>>>>>> 34c866b203fc69e764e8d89c6d360026fd78bbf9
                         </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        
+
         <!-- Pagination (if needed) -->
         <div class="row mt-5">
             <div class="col-12 text-center">
                 <p class="text-muted">แสดงสินค้าทั้งหมด {{ products|length }} รายการ</p>
             </div>
         </div>
-        
+
     {% else %}
         <!-- No Products -->
         <div class="text-center py-5">
@@ -260,5 +240,21 @@ $(document).ready(function() {
     $('#view-grid').addClass('active');
     updateResultsCount();
 });
+
+items.sort(function(a, b) {
+    switch(sortBy) {
+        case 'name-asc':
+            return $(a).data('name').localeCompare($(b).data('name'), 'th');
+        case 'name-desc':
+            return $(b).data('name').localeCompare($(a).data('name'), 'th');
+        case 'price-asc':
+            return $(a).data('price') - $(b).data('price');
+        case 'price-desc':
+            return $(b).data('price') - $(a).data('price');
+        default:
+            return 0;
+    }
+});
+
 </script>
 {% endblock %}

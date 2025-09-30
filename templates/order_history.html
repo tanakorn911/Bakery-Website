@@ -3,23 +3,8 @@
 {% block title %}ประวัติคำสั่งซื้อ{% endblock %}
 
 {% block extra_css %}
-<<<<<<< HEAD
 <link rel="stylesheet" href="{{ url_for('static', filename='css/orders_history.css') }}">
 {% endblock %}
-=======
-<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-{% endblock %}
-
-{% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">
-        {% if is_admin %}
-            รายการคำสั่งซื้อทั้งหมด
-        {% else %}
-            ประวัติคำสั่งซื้อของคุณ
-        {% endif %}
-    </h2>
->>>>>>> 34c866b203fc69e764e8d89c6d360026fd78bbf9
 
 {% block content %}
 <div class="orders-history-page">

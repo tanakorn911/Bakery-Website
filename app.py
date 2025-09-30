@@ -948,12 +948,8 @@ def admin():
         JOIN categories c ON p.category_id = c.id 
         ORDER BY p.created_at DESC
     """).fetchall()
-    categories = get_categories()
-<<<<<<< HEAD
-=======
-    # --- เพิ่มสถิติรายวัน ---
+    categories = get_categories()    # --- เพิ่มสถิติรายวัน ---
     # นับเฉพาะ order ที่ไม่ถูกยกเลิก
->>>>>>> 34c866b203fc69e764e8d89c6d360026fd78bbf9
     orders_today = conn.execute("SELECT COUNT(*) FROM orders WHERE date(created_at) = date('now') AND status != 'cancelled'").fetchone()[0]
     new_users_today = conn.execute("SELECT COUNT(*) FROM users WHERE role = 'customer' AND date(created_at) = date('now')").fetchone()[0]
     # ยอดขายวันนี้นับเฉพาะ order ที่เสร็จสิ้น
