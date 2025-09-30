@@ -3,6 +3,7 @@
 {% block title %}ประวัติคำสั่งซื้อทั้งหมด{% endblock %}
 
 {% block extra_css %}
+<<<<<<< HEAD
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_orders_his.css') }}">
 {% endblock %}
 
@@ -24,6 +25,47 @@
                     <th>หมายเลขคำสั่งซื้อ</th>
                     {% if is_admin %}
                     <th>ผู้สั่งซื้อ</th>
+=======
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="admin-order-history-title">ประวัติคำสั่งซื้อทั้งหมด</h2>
+
+    {% if orders %}
+    <table class="table admin-order-history-table align-middle">
+        <thead>
+            <tr>
+                <th>หมายเลขคำสั่งซื้อ</th>
+                <th>ผู้สั่งซื้อ</th>
+                <th>อีเมล</th>
+                <th>จำนวนเงิน (บาท)</th>
+                <th>วันที่สั่งซื้อ</th>
+                <th>สถานะ</th>
+                <th>รายละเอียด</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.id }}</td>
+                <td>{{ order.username }}</td>
+                <td>{{ order.email }}</td>
+                <td>{{ "%.2f"|format(order.total_amount) }}</td>
+                <td>{{ order.created_at | to_bangkok }}</td>
+                <td>
+                    {% if order.status == 'pending' %}
+                        <span class="admin-order-history-badge bg-warning">รอดำเนินการ</span>
+                    {% elif order.status == 'processing' %}
+                        <span class="admin-order-history-badge bg-info">กำลังจัดเตรียม</span>
+                    {% elif order.status == 'completed' %}
+                        <span class="admin-order-history-badge bg-success">เสร็จสิ้น</span>
+                    {% elif order.status == 'cancelled' %}
+                        <span class="admin-order-history-badge bg-danger">ยกเลิกแล้ว</span>
+                    {% else %}
+                        <span class="admin-order-history-badge bg-secondary">{{ order.status }}</span>
+>>>>>>> 34c866b203fc69e764e8d89c6d360026fd78bbf9
                     {% endif %}
                     <th>จำนวนเงิน (บาท)</th>
                     <th>วันที่สั่งซื้อ</th>
