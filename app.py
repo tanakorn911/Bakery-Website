@@ -5,6 +5,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
 from functools import wraps
+import qrcode
+from io import BytesIO
 import base64
 from zoneinfo import ZoneInfo
 
@@ -85,7 +87,9 @@ def init_db():
         customer_name TEXT NOT NULL,
         customer_phone TEXT NOT NULL,
         customer_address TEXT,
+        cancelled_at DATETIME,
         notes TEXT,
+        delivery_method TEXT DEFAULT 'delivery',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
     )
@@ -634,46 +638,74 @@ def checkout():
     if request.method == 'POST':
         customer_name = request.form['customer_name']
         customer_phone = request.form['customer_phone']
-        customer_address_id = request.form.get('customer_address')
+        delivery_method = request.form.get('delivery_method', 'delivery')
+        payment_method = request.form.get('payment_method', 'cod')
         notes = request.form.get('notes', '')
 
-        # ดึงที่อยู่จริงจาก id
-        conn = get_db_connection()
-        address_row = conn.execute("SELECT * FROM addresses WHERE id = ?", (customer_address_id,)).fetchone()
-        customer_address = f"{address_row['recipient_name']}, {address_row['address']}, {address_row['city'] or ''}, {address_row['postal_code'] or ''}, {address_row['province'] or ''}"
+        # จัดการที่อยู่
+        customer_address = ""
+        if delivery_method == 'delivery':
+            customer_address_id = request.form.get('customer_address')
+            if not customer_address_id:
+                flash('กรุณาเลือกที่อยู่จัดส่ง')
+                return render_template('checkout.html',
+                                     cart_items=cart,
+                                     total_items=total_items,
+                                     total_price=total_price,
+                                     addresses=addresses)
+            
+            conn = get_db_connection()
+            address_row = conn.execute("SELECT * FROM addresses WHERE id = ?", (customer_address_id,)).fetchone()
+            if address_row:
+                customer_address = f"{address_row['recipient_name']}, {address_row['address']}, {address_row['city'] or ''}, {address_row['postal_code'] or ''}, {address_row['province'] or ''}"
+            conn.close()
+        else:
+            customer_address = "รับที่ร้าน Sweet Dreams Bakery"
 
+        # สร้าง order
+        conn = get_db_connection()
         try:
             cursor = conn.execute("""
                 INSERT INTO orders 
-                (user_id, total_amount, customer_name, customer_phone, customer_address, notes, status)
-                VALUES (?, ?, ?, ?, ?, ?, 'pending')
-            """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes))
+                (user_id, total_amount, customer_name, customer_phone, customer_address, notes, status, delivery_method)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+            """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes, delivery_method))
             order_id = cursor.lastrowid
 
             # เพิ่ม order_items และลด stock
             for item in cart.values():
-                # เพิ่ม order_items
                 conn.execute("""
                     INSERT INTO order_items 
                     (order_id, product_id, quantity, unit_price, total_price, options)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (order_id, item['id'], item['quantity'], item['price'], item['price'] * item['quantity'], item.get('options', '')))
 
-                # ลด stock ของสินค้า
                 conn.execute("""
                     UPDATE products
                     SET stock_quantity = stock_quantity - ?
                     WHERE id = ? AND stock_quantity >= ?
                 """, (item['quantity'], item['id'], item['quantity']))
 
-                # ตรวจสอบ stock เพียงพอ
                 if conn.total_changes == 0:
                     raise Exception(f"สินค้ารหัส {item['id']} มีไม่เพียงพอ")
 
+            # สร้างข้อมูล payment
+            payment_status = 'paid' if payment_method == 'cod' else 'pending'
+            conn.execute("""
+                INSERT INTO payments (order_id, payment_method, amount, status)
+                VALUES (?, ?, ?, ?)
+            """, (order_id, payment_method, total_price, payment_status))
+
             conn.commit()
             session['cart'] = {}
-            flash(f'ขอบคุณสำหรับคำสั่งซื้อ! หมายเลขคำสั่งซื้อ: #{order_id}')
-            return redirect(url_for('order_detail', order_id=order_id))
+
+            # ถ้าเลือก PromptPay ให้ไป payment page
+            if payment_method == 'promptpay':
+                return redirect(url_for('payment_page', order_id=order_id))
+            else:
+                flash(f'สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: #{order_id}')
+                return redirect(url_for('order_detail', order_id=order_id))
+
         except Exception as e:
             conn.rollback()
             flash(f'เกิดข้อผิดพลาด: {str(e)}')
@@ -686,6 +718,202 @@ def checkout():
                            total_price=total_price,
                            addresses=addresses)
 
+
+@app.route('/payment/<int:order_id>')
+@login_required
+def payment_page(order_id):
+    """หน้าชำระเงินผ่าน PromptPay"""
+    conn = get_db_connection()
+    
+    # ตรวจสอบคำสั่งซื้อ
+    order = conn.execute("""
+        SELECT o.*, p.payment_method, p.status as payment_status
+        FROM orders o
+        LEFT JOIN payments p ON o.id = p.order_id
+        WHERE o.id = ? AND o.user_id = ?
+    """, (order_id, session['user_id'])).fetchone()
+    
+    if not order:
+        flash('ไม่พบคำสั่งซื้อ')
+        conn.close()
+        return redirect(url_for('index'))
+    
+    # ดึงรายการสินค้า
+    items = conn.execute("""
+        SELECT oi.*, p.name as product_name
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    """, (order_id,)).fetchall()
+    
+    conn.close()
+    
+    # สร้าง QR Code PromptPay
+    promptpay_id = "0809317630"  # เปลี่ยนเป็นเบอร์ PromptPay จริงของร้าน
+    amount = float(order['total_amount'])
+    
+    qr_data = generate_promptpay_qr(promptpay_id, amount)
+    
+    return render_template('payment.html',
+                         order=dict(order),
+                         items=items,
+                         qr_data=qr_data,
+                         promptpay_id=promptpay_id)
+
+
+@app.route('/confirm_payment/<int:order_id>', methods=['POST'])
+@login_required
+def confirm_payment(order_id):
+    """ยืนยันการชำระเงิน (สำหรับลูกค้า)"""
+    data = request.get_json()
+    slip_image = data.get('slip_image')  # Base64 image
+    
+    conn = get_db_connection()
+    
+    # ตรวจสอบคำสั่งซื้อ
+    order = conn.execute("""
+        SELECT * FROM orders WHERE id = ? AND user_id = ?
+    """, (order_id, session['user_id'])).fetchone()
+    
+    if not order:
+        conn.close()
+        return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
+    
+    try:
+        # อัพเดทสถานะการชำระเงิน
+        conn.execute("""
+            UPDATE payments 
+            SET status = 'verifying', paid_at = CURRENT_TIMESTAMP
+            WHERE order_id = ?
+        """, (order_id,))
+        
+        # อัพเดทสถานะคำสั่งซื้อ
+        conn.execute("""
+            UPDATE orders 
+            SET status = 'pending'
+            WHERE id = ?
+        """, (order_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'ยืนยันการชำระเงินเรียบร้อย รอแอดมินตรวจสอบ'
+        })
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/admin/verify_payment/<int:order_id>', methods=['POST'])
+def admin_verify_payment(order_id):
+    """ยืนยันการชำระเงิน (สำหรับแอดมิน)"""
+    if session.get('role') != 'admin':
+        return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
+    
+    data = request.get_json()
+    action = data.get('action')  # 'approve' or 'reject'
+    
+    conn = get_db_connection()
+    
+    try:
+        if action == 'approve':
+            # อนุมัติการชำระเงิน
+            conn.execute("""
+                UPDATE payments 
+                SET status = 'paid'
+                WHERE order_id = ?
+            """, (order_id,))
+            
+            conn.execute("""
+                UPDATE orders 
+                SET status = 'processing'
+                WHERE id = ?
+            """, (order_id,))
+            
+            message = 'อนุมัติการชำระเงินเรียบร้อย'
+        else:
+            # ปฏิเสธการชำระเงิน
+            conn.execute("""
+                UPDATE payments 
+                SET status = 'rejected'
+                WHERE order_id = ?
+            """, (order_id,))
+            
+            conn.execute("""
+                UPDATE orders 
+                SET status = 'pending'
+                WHERE id = ?
+            """, (order_id,))
+            
+            message = 'ปฏิเสธการชำระเงิน'
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': message})
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+def generate_promptpay_qr(promptpay_id, amount):
+    """สร้าง QR Code สำหรับ PromptPay"""
+    # ลบขีดและช่องว่างออก
+    promptpay_id = promptpay_id.replace('-', '').replace(' ', '')
+    
+    # สร้าง payload ตามมาตรฐาน EMVCo
+    payload = "00020101021129370016A000000677010111"
+    
+    # เพิ่มหมายเลข PromptPay (เบอร์โทร 10 หลัก)
+    if len(promptpay_id) == 10:
+        promptpay_id = "+66809317630" + promptpay_id[1:]  # เปลี่ยน 0 เป็น +66
+    
+    payload += f"01{len(promptpay_id):02d}{promptpay_id}"
+    
+    # เพิ่มจำนวนเงิน
+    if amount > 0:
+        amount_str = f"{amount:.2f}"
+        payload += f"5802TH5303764{len(amount_str):02d}{amount_str}"
+    else:
+        payload += "5802TH5303764"
+    
+    # เพิ่ม checksum
+    payload += "6304"
+    
+    # คำนวณ CRC16
+    crc = calculate_crc16(payload.encode())
+    payload += f"{crc:04X}"
+    
+    # สร้าง QR Code
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(payload)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # แปลงเป็น base64
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
+
+
+def calculate_crc16(data):
+    """คำนวณ CRC16 สำหรับ PromptPay QR"""
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 1:
+                crc = (crc >> 1) ^ 0x8408
+            else:
+                crc >>= 1
+    return crc ^ 0xFFFF
 
 # ========================
 # User Profile Routes
@@ -847,6 +1075,8 @@ def order_detail(order_id):
     return render_template("order_detail.html", order=order, addr=addr, items=items)
 
 
+from datetime import datetime
+
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
 @login_required
 def cancel_order(order_id):
@@ -880,7 +1110,14 @@ def cancel_order(order_id):
                 WHERE id = ?
             """, (item['quantity'], item['product_id']))
 
-        conn.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order_id,))
+        # บันทึก status เป็น cancelled และเก็บเวลายกเลิก
+        cancelled_time = datetime.now()
+        conn.execute("""
+            UPDATE orders 
+            SET status = 'cancelled', cancelled_at = ?
+            WHERE id = ?
+        """, (cancelled_time, order_id))
+
         conn.commit()
         conn.close()
 

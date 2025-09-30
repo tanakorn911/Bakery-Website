@@ -1,0 +1,421 @@
+{% extends "layout.html" %}
+
+{% block title %}ชำระเงิน - Sweet Dreams Bakery{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+    
+    .payment-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        padding: 40px;
+        text-align: center;
+    }
+    
+    .payment-header {
+        color: #8B4513;
+        margin-bottom: 30px;
+    }
+    
+    .payment-header h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .order-info {
+        background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .order-info-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .order-info-item:last-child {
+        border-bottom: none;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid rgba(255,255,255,0.3);
+    }
+    
+    .qr-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 30px;
+        margin: 30px 0;
+    }
+    
+    .qr-code {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        display: inline-block;
+        margin: 20px 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .qr-code img {
+        max-width: 280px;
+        height: auto;
+    }
+    
+    .promptpay-info {
+        color: #2d3748;
+        margin-top: 20px;
+    }
+    
+    .promptpay-number {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #8B4513;
+        margin: 15px 0;
+    }
+    
+    .payment-instructions {
+        text-align: left;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    
+    .payment-instructions h5 {
+        color: #856404;
+        margin-bottom: 15px;
+    }
+    
+    .payment-instructions ol {
+        padding-left: 20px;
+        color: #856404;
+    }
+    
+    .payment-instructions li {
+        margin: 8px 0;
+    }
+    
+    .slip-upload {
+        margin: 30px 0;
+    }
+    
+    .upload-area {
+        border: 3px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 40px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #f8f9fa;
+    }
+    
+    .upload-area:hover {
+        border-color: #8B4513;
+        background: #fff;
+    }
+    
+    .upload-area.dragover {
+        border-color: #8B4513;
+        background: #e8f4ff;
+    }
+    
+    .upload-icon {
+        font-size: 3rem;
+        color: #8B4513;
+        margin-bottom: 15px;
+    }
+    
+    .preview-image {
+        max-width: 300px;
+        margin: 20px auto;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-confirm {
+        background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);
+        color: white;
+        border: none;
+        padding: 15px 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    
+    .btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .btn-confirm:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .payment-timer {
+        background: #fff3cd;
+        color: #856404;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+        font-weight: 600;
+    }
+    
+    .countdown {
+        font-size: 1.5rem;
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container payment-container">
+    <div class="payment-card">
+        <div class="payment-header">
+            <i class="fas fa-qrcode" style="font-size: 3rem; color: #8B4513;"></i>
+            <h2>ชำระเงินผ่าน PromptPay</h2>
+            <p class="text-muted">คำสั่งซื้อ #{{ order.id }}</p>
+        </div>
+        
+        <div class="order-info">
+            <div class="order-info-item">
+                <span>ชื่อผู้สั่ง:</span>
+                <strong>{{ order.customer_name }}</strong>
+            </div>
+            <div class="order-info-item">
+                <span>เบอร์โทร:</span>
+                <strong>{{ order.customer_phone }}</strong>
+            </div>
+            <div class="order-info-item">
+                <span>จำนวนสินค้า:</span>
+                <strong>{{ items|length }} รายการ</strong>
+            </div>
+            <div class="order-info-item">
+                <span>ยอดชำระทั้งหมด:</span>
+                <strong>฿{{ "{:,.0f}".format(order.total_amount) }}</strong>
+            </div>
+        </div>
+        
+        <div class="payment-timer">
+            <i class="fas fa-clock"></i> 
+            โปรดชำระเงินภายใน <span class="countdown" id="countdown">15:00</span> นาที
+        </div>
+        
+        <div class="qr-section">
+            <h4 style="color: #2d3748; margin-bottom: 20px;">
+                <i class="fas fa-mobile-alt"></i> สแกน QR Code นี้ด้วยแอปธนาคาร
+            </h4>
+            
+            <div class="qr-code">
+                <img src="{{ qr_data }}" alt="PromptPay QR Code" id="qr-image">
+            </div>
+            
+            <div class="promptpay-info">
+                <p>หรือโอนเงินไปที่</p>
+                <div class="promptpay-number">
+                    <i class="fas fa-phone"></i> {{ promptpay_id }}
+                </div>
+                <small class="text-muted">PromptPay: Sweet Dreams Bakery</small>
+            </div>
+        </div>
+        
+        <div class="payment-instructions">
+            <h5><i class="fas fa-info-circle"></i> ขั้นตอนการชำระเงิน</h5>
+            <ol>
+                <li>เปิดแอปธนาคารหรือแอป Mobile Banking ของคุณ</li>
+                <li>เลือกเมนู "สแกน QR" หรือ "PromptPay"</li>
+                <li>สแกน QR Code ด้านบน</li>
+                <li>ตรวจสอบยอดเงินให้ถูกต้อง: <strong>฿{{ "{:,.0f}".format(order.total_amount) }}</strong></li>
+                <li>ยืนยันการโอนเงิน</li>
+                <li>อัพโหลดสลิปการโอนเงินด้านล่าง</li>
+            </ol>
+        </div>
+        
+        <div class="slip-upload">
+            <h4 style="margin-bottom: 20px;">
+                <i class="fas fa-upload"></i> อัพโหลดหลักฐานการโอนเงิน
+            </h4>
+            
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
+                <p class="text-muted">รองรับไฟล์: JPG, PNG (ขนาดไม่เกิน 5MB)</p>
+                <input type="file" id="slip-input" accept="image/*" style="display: none;">
+            </div>
+            
+            <div id="preview-container" style="display: none;">
+                <img id="preview" class="preview-image" alt="Preview">
+                <button class="btn btn-sm btn-danger mt-2" onclick="removeSlip()">
+                    <i class="fas fa-times"></i> ลบรูป
+                </button>
+            </div>
+            
+            <button class="btn btn-confirm" id="confirm-btn" disabled onclick="confirmPayment()">
+                <i class="fas fa-check-circle"></i> ยืนยันการชำระเงิน
+            </button>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('order_detail', order_id=order.id) }}" class="text-muted">
+                <i class="fas fa-arrow-left"></i> กลับไปดูรายละเอียดคำสั่งซื้อ
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Countdown Timer (15 นาที)
+    let timeLeft = 15 * 60; // 15 minutes in seconds
+    
+    function updateCountdown() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        document.getElementById('countdown').textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            alert('หมดเวลาชำระเงิน กรุณาสั่งซื้อใหม่อีกครั้ง');
+            window.location.href = '{{ url_for("index") }}';
+        }
+        
+        timeLeft--;
+    }
+    
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+    
+    // Upload Slip
+    const uploadArea = document.getElementById('upload-area');
+    const slipInput = document.getElementById('slip-input');
+    const preview = document.getElementById('preview');
+    const previewContainer = document.getElementById('preview-container');
+    const confirmBtn = document.getElementById('confirm-btn');
+    
+    let slipImage = null;
+    
+    // Click to upload
+    uploadArea.addEventListener('click', () => {
+        slipInput.click();
+    });
+    
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+    
+    // File input change
+    slipInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+    
+    function handleFile(file) {
+        // ตรวจสอบประเภทไฟล์
+        if (!file.type.startsWith('image/')) {
+            alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+            return;
+        }
+        
+        // ตรวจสอบขนาดไฟล์ (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ไฟล์มีขนาดใหญ่เกิน 5MB');
+            return;
+        }
+        
+        // แสดง preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            slipImage = e.target.result;
+            preview.src = slipImage;
+            previewContainer.style.display = 'block';
+            uploadArea.style.display = 'none';
+            confirmBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    function removeSlip() {
+        slipImage = null;
+        previewContainer.style.display = 'none';
+        uploadArea.style.display = 'block';
+        confirmBtn.disabled = true;
+        slipInput.value = '';
+    }
+    
+    function confirmPayment() {
+        if (!slipImage) {
+            alert('กรุณาอัพโหลดหลักฐานการโอนเงิน');
+            return;
+        }
+        
+        if (!confirm('ยืนยันการชำระเงินหรือไม่?')) {
+            return;
+        }
+        
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังดำเนินการ...';
+        
+        fetch('/confirm_payment/{{ order.id }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                slip_image: slipImage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('ยืนยันการชำระเงินเรียบร้อย!\nรอแอดมินตรวจสอบภายใน 5-10 นาที');
+                window.location.href = '{{ url_for("order_detail", order_id=order.id) }}';
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> ยืนยันการชำระเงิน';
+            }
+        })
+        .catch(error => {
+            alert('เกิดข้อผิดพลาด: ' + error);
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-check-circle"></i> ยืนยันการชำระเงิน';
+        });
+    }
+</script>
+{% endblock %}

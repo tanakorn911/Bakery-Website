@@ -1,107 +1,515 @@
 {% extends "layout.html" %}
+
 {% block title %}รายละเอียดคำสั่งซื้อ #{{ order.id }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/order_detail.css')}}">
+<style>
+    .order-container {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+    
+    .order-header {
+        background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .order-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .order-status {
+        display: inline-block;
+        padding: 10px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-top: 15px;
+    }
+    
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-processing {
+        background: #cce5ff;
+        color: #004085;
+    }
+    
+    .status-completed {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-cancelled {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .order-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        color: #2d3748;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .info-item {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+    
+    .info-value {
+        font-weight: 600;
+        color: #2d3748;
+    }
+    
+    .payment-status-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .payment-status-card.verified {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .payment-status-card.paid {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .items-table th {
+        background: #f8f9fa;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #2d3748;
+    }
+    
+    .items-table td {
+        padding: 15px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .items-table tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .total-row {
+        background: #f8f9fa;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-pay {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-pay:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 30px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -26px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #667eea;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #667eea;
+    }
+    
+    .timeline-item.active::before {
+        background: #28a745;
+        box-shadow: 0 0 0 2px #28a745;
+    }
+    
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+    }
+    
+    .timeline-time {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5 order-detail-page">
-    <h4>คำสั่งซื้อ #{{ order.id }}</h4>
-    <p>วันที่: {{ order.created_at | to_bangkok }} | สถานะ: 
-        <span id="order-status" class="badge
-            {% if order.status == 'pending' %}bg-warning text-dark
-            {% elif order.status == 'processing' %}bg-info text-white
-            {% elif order.status == 'completed' %}bg-success text-white
-            {% elif order.status == 'cancelled' %}bg-danger text-white
+<div class="container order-container">
+    <div class="order-header">
+        <div class="order-number">
+            <i class="fas fa-receipt"></i> คำสั่งซื้อ #{{ order.id }}
+        </div>
+        <p class="mb-0">สั่งเมื่อ: {{ order.created_at|to_bangkok('%d/%m/%Y %H:%M') }}</p>
+        
+        <div class="order-status status-{{ order.status }}">
+            {% if order.status == 'pending' %}
+                <i class="fas fa-clock"></i> รอดำเนินการ
+            {% elif order.status == 'processing' %}
+                <i class="fas fa-sync fa-spin"></i> กำลังจัดเตรียม
+            {% elif order.status == 'completed' %}
+                <i class="fas fa-check-circle"></i> เสร็จสิ้น
+            {% elif order.status == 'cancelled' %}
+                <i class="fas fa-times-circle"></i> ยกเลิกแล้ว
             {% endif %}
-        ">
-            {% if order.status == 'pending' %}รอดำเนินการ
-            {% elif order.status == 'processing' %}กำลังจัดเตรียม
-            {% elif order.status == 'completed' %}เสร็จสิ้น
-            {% elif order.status == 'cancelled' %}ยกเลิกแล้ว
-            {% endif %}
-        </span>
-    </p>
-
-    <h5 class="mt-4">ข้อมูลผู้รับ</h5>
-    <p>
-        ชื่อ: {{ order.customer_name }}<br>
-        เบอร์โทร: {{ order.customer_phone }}<br>
-        ที่อยู่: {{ addr.full_address or 'ไม่ระบุ' }}<br>
-        หมายเหตุ: {{ order.notes or '-' }}
-    </p>
-
-    <h5 class="mt-4">รายการสินค้า</h5>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>สินค้า</th>
-                <th>ราคา/หน่วย</th>
-                <th>จำนวน</th>
-                <th>รวม</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.product_name }}</td>
-                <td>{{ "%.2f"|format(item.unit_price) }} บาท</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ "%.2f"|format(item.total_price) }} บาท</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr>
-                <th colspan="3" class="text-end">รวมทั้งหมด</th>
-                <th>{{ "%.2f"|format(order.total_amount) }} บาท</th>
-            </tr>
-        </tfoot>
-    </table>
-
-    <div class="d-flex justify-content-between mt-3">
-        <!-- ปุ่มกลับซ้าย -->
-        <a href="{{ url_for('order_history') }}" class="btn btn-secondary">
-            กลับ
-        </a>
-
-        <!-- ปุ่มยกเลิกขวา -->
-        {% if order.status == 'pending' %}
-        <form id="cancel-all-form" action="{{ url_for('cancel_order', order_id=order.id) }}">
-            <button type="submit" class="btn btn-danger btn-sm">
-                <i class="fas fa-trash-alt me-1"></i>ยกเลิกคำสั่งซื้อ
-            </button>
-        </form>
+        </div>
+    </div>
+    
+    <!-- Payment Status -->
+    {% if order.payment_method == 'promptpay' %}
+    <div class="payment-status-card {% if order.payment_status == 'paid' %}paid{% elif order.payment_status == 'verifying' %}verified{% endif %}">
+        <h4><i class="fas fa-credit-card"></i> สถานะการชำระเงิน</h4>
+        {% if order.payment_status == 'pending' %}
+            <p class="mb-0">
+                <i class="fas fa-exclamation-circle"></i> 
+                รอชำระเงิน - กรุณาชำระเงินผ่าน PromptPay
+            </p>
+            <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-light mt-3">
+                <i class="fas fa-qrcode"></i> ชำระเงินตอนนี้
+            </a>
+        {% elif order.payment_status == 'verifying' %}
+            <p class="mb-0">
+                <i class="fas fa-sync fa-spin"></i> 
+                กำลังตรวจสอบการชำระเงิน - โปรดรอสักครู่
+            </p>
+        {% elif order.payment_status == 'paid' %}
+            <p class="mb-0">
+                <i class="fas fa-check-circle"></i> 
+                ชำระเงินเรียบร้อยแล้ว
+            </p>
+        {% elif order.payment_status == 'rejected' %}
+            <p class="mb-0">
+                <i class="fas fa-times-circle"></i> 
+                การชำระเงินถูกปฏิเสธ - กรุณาชำระใหม่อีกครั้ง
+            </p>
+            <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-light mt-3">
+                <i class="fas fa-redo"></i> ชำระเงินอีกครั้ง
+            </a>
         {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Customer Information -->
+    <div class="order-card">
+        <h4 class="section-title">
+            <i class="fas fa-user"></i> ข้อมูลผู้สั่ง
+        </h4>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">ชื่อ-นามสกุล</div>
+                <div class="info-value">{{ order.customer_name }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">เบอร์โทรศัพท์</div>
+                <div class="info-value">{{ order.customer_phone }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">ที่อยู่จัดส่ง</div>
+                <div class="info-value">{{ addr.full_address if addr else 'ไม่ระบุ' }}</div>
+            </div>
+            {% set pm = order.payment_method|default('cod')|lower|replace(' ', '') %}
+            <div class="info-item">
+                <div class="info-label">วิธีชำระเงิน</div>
+                <div class="info-value">
+                    {% if pm == 'promptpay' %}
+                        <i class="fas fa-qrcode"></i> PromptPay
+                    {% else %}
+                        <i class="fas fa-money-bill-wave"></i> เก็บเงินปลายทาง
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if order.notes %}
+        <div class="info-item">
+            <div class="info-label">หมายเหตุ</div>
+            <div class="info-value">{{ order.notes }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    
+    <!-- Order Items -->
+    <div class="order-card">
+        <h4 class="section-title">
+            <i class="fas fa-shopping-bag"></i> รายการสินค้า
+        </h4>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>สินค้า</th>
+                    <th style="text-align: center;">จำนวน</th>
+                    <th style="text-align: right;">ราคา/หน่วย</th>
+                    <th style="text-align: right;">รวม</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        <strong>{{ item.product_name }}</strong>
+                        {% if item.options %}
+                        <br><small class="text-muted">{{ item.options }}</small>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">{{ item.quantity }}</td>
+                    <td style="text-align: right;">฿{{ "{:,.0f}".format(item.unit_price) }}</td>
+                    <td style="text-align: right;">฿{{ "{:,.0f}".format(item.total_price) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;">ยอดรวมทั้งหมด</td>
+                    <td style="text-align: right;">฿{{ "{:,.0f}".format(order.total_amount) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Order Timeline -->
+    <div class="order-card">
+        <h4 class="section-title">
+            <i class="fas fa-history"></i> ประวัติคำสั่งซื้อ
+        </h4>
+        <div class="timeline">
+
+            <!-- สั่งซื้อสำเร็จ -->
+            <div class="timeline-item active">
+                <div class="timeline-content">
+                    <strong>สั่งซื้อสำเร็จ</strong>
+                    <div class="timeline-time">
+                        {{ order.created_at|to_bangkok('%d/%m/%Y %H:%M') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- รอชำระเงิน / กำลังตรวจสอบ PromptPay -->
+            {% if order.payment_method|default('cod')|lower|replace(' ', '') == 'promptpay' %}
+            <div class="timeline-item {% if order.payment_status in ['verifying', 'paid'] %}active{% endif %}">
+                <div class="timeline-content">
+                    <strong>
+                        {% if order.payment_status == 'pending' %}
+                            รอชำระเงิน
+                        {% elif order.payment_status == 'verifying' %}
+                            กำลังตรวจสอบการชำระเงิน
+                        {% elif order.payment_status == 'paid' %}
+                            ชำระเงินแล้ว
+                        {% elif order.payment_status == 'rejected' %}
+                            การชำระเงินถูกปฏิเสธ
+                        {% endif %}
+                    </strong>
+                    <div class="timeline-time">
+                        {% if order.paid_at %}
+                            {{ order.paid_at|to_bangkok('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            {% if order.payment_status == 'pending' %}
+                                รอการชำระเงิน
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- กำลังจัดเตรียม / จัดส่ง -->
+            {% if order.status in ['processing', 'completed'] %}
+            <div class="timeline-item {% if order.status in ['processing', 'completed'] %}active{% endif %}">
+                <div class="timeline-content">
+                    <strong>กำลังจัดเตรียม / กำลังจัดส่ง</strong>
+                    <div class="timeline-time">
+                        {% if order.status == 'completed' and order.delivered_at %}
+                            {{ order.delivered_at|to_bangkok('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            กำลังดำเนินการ
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- จัดส่งสำเร็จ -->
+            {% if order.status == 'completed' %}
+            <div class="timeline-item active">
+                <div class="timeline-content">
+                    <strong>จัดส่งสำเร็จ</strong>
+                    <div class="timeline-time">
+                        {{ order.delivered_at|to_bangkok('%d/%m/%Y %H:%M') if order.delivered_at else 'เสร็จสิ้น' }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ยกเลิกคำสั่งซื้อ -->
+            {% if order.status == 'cancelled' %}
+                <div class="timeline-item active">
+                    <div class="timeline-content" style="background:#f8d7da; color:#721c24;">
+                        <strong>ยกเลิกคำสั่งซื้อ</strong>
+                        <div class="timeline-time">
+                            {% if order.cancelled_at %}
+                                {{ order.cancelled_at|to_bangkok('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                ไม่ระบุเวลา
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="order-card">
+        <div class="action-buttons">
+            <a href="{{ url_for('order_history') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> กลับไปประวัติคำสั่งซื้อ
+            </a>
+            
+            {% if order.payment_method == 'promptpay' and order.payment_status == 'pending' %}
+            <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-pay">
+                <i class="fas fa-qrcode"></i> ชำระเงินตอนนี้
+            </a>
+            {% endif %}
+            
+            {% if order.status == 'pending' %}
+            <button class="btn btn-danger" onclick="cancelOrder({{ order.id }})">
+                <i class="fas fa-times"></i> ยกเลิกคำสั่งซื้อ
+            </button>
+            {% endif %}
+            
+            {% if order.status == 'completed' %}
+            <button class="btn btn-primary" onclick="reorder({{ order.id }})">
+                <i class="fas fa-redo"></i> สั่งซื้ออีกครั้ง
+            </button>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <script>
-document.getElementById('cancel-all-form')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    if(!confirm('คุณแน่ใจว่าจะยกเลิกคำสั่งซื้อทั้งหมด?')) return;
-
-    fetch(this.action, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: {{ order.id }} }),
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.message);
-        if(data.success){
-            // อัปเดต badge ทันที
-            const badge = document.getElementById('order-status');
-            badge.textContent = 'ยกเลิกแล้ว';
-            badge.className = 'badge bg-danger text-white';
-            // ซ่อนปุ่มยกเลิก
-            document.getElementById('cancel-all-form').style.display = 'none';
+    function cancelOrder(orderId) {
+        if (!confirm('ยืนยันการยกเลิกคำสั่งซื้อนี้?')) {
+            return;
         }
-    })
-    .catch(err => alert('เกิดข้อผิดพลาด: ' + err));
-});
+        
+        fetch(`/cancel_order/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+            }
+        });
+    }
+    
+    function reorder(orderId) {
+        if (!confirm('เพิ่มสินค้าจากคำสั่งซื้อนี้ลงตะกร้าใหม่?')) {
+            return;
+        }
+        
+        fetch(`/reorder/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.href = '/cart';
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+            }
+        });
+    }
 </script>
 {% endblock %}

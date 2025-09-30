@@ -1,0 +1,217 @@
+/* Address Book Container */
+.address-book-container {
+    max-width: 1200px;
+    margin: 40px auto 0 auto;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(101, 67, 33, 0.1);
+    padding: 40px;
+}
+
+.address-book-container h2 {
+    color: #8B4513;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+    text-align: left;
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.address-book-container h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 80px;
+    height: 3px;
+    background: #8B4513;
+    border-radius: 2px;
+}
+
+/* Button Styles */
+.btn-primary {
+    background: #8B4513;
+    border: none;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: #A0522D;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+/* Table Styles */
+.table {
+    margin-top: 30px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 3px 15px rgba(101, 67, 33, 0.08);
+}
+
+.table thead {
+    background: #D2B48C;
+}
+
+.table thead th {
+    color: #654321;
+    font-weight: 600;
+    text-align: center;
+    padding: 15px;
+    border: none;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #F5DEB3;
+}
+
+.table tbody tr:hover {
+    background-color: #FFF8DC;
+}
+
+.table tbody td {
+    padding: 15px;
+    vertical-align: middle;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.table tbody td:last-child {
+    text-align: center;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Empty State */
+.table tbody tr td[colspan="7"] {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 40px;
+    font-size: 1.1rem;
+}
+
+/* Action Buttons */
+.btn-sm {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0 3px;
+}
+
+.btn-warning {
+    background: #DAA520;
+    border: none;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #B8860B;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.3);
+}
+
+.btn-danger {
+    background: #dc3545;
+    border: none;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* Delete Form */
+form[action*="delete_address"] {
+    display: inline-block;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .address-book-container {
+        padding: 30px 20px;
+    }
+
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 10px 8px;
+    }
+
+    .btn-sm {
+        padding: 5px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .address-book-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .table {
+        min-width: 800px;
+    }
+
+    .btn-primary {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.address-book-container {
+    animation: fadeIn 0.5s ease;
+}
+
+/* Scrollbar Styling */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #FFF8DC;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #D2B48C;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #8B4513;
+}

@@ -3,75 +3,386 @@
 {% block title %}ชำระเงิน - Sweet Dreams Bakery{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout.css') }}">
+<style>
+    .checkout-container {
+        max-width: 1200px;
+        margin: 40px auto;
+    }
+    .checkout-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+    .section-title {
+        color: #8B4513;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 8px;
+    }
+    .form-control, .form-select {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 1rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #8B4513;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .payment-method-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .payment-method-card:hover {
+        border-color: #8B4513;
+        background: #f7fafc;
+    }
+    .payment-method-card.active {
+        border-color: #8B4513;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+    }
+    .payment-icon {
+        font-size: 2rem;
+        color: #8B4513;
+    }
+    .order-summary {
+        background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        position: sticky;
+        top: 20px;
+    }
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .summary-total {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 2px solid rgba(255,255,255,0.3);
+    }
+    .btn-checkout {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: white;
+        color: #8B4513;
+        border: none;
+        border-radius: 10px;
+        margin-top: 20px;
+        transition: all 0.3s;
+    }
+    .btn-checkout:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255,255,255,0.3);
+    }
+    .address-select-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+    }
+    .address-select-card:hover {
+        border-color: #8B4513;
+    }
+    #address-section {
+        transition: all 0.3s;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2>ชำระเงิน</h2>
+<div class="container checkout-container">
+    <div class="row">
+        <!-- ฟอร์มกรอกข้อมูล -->
+        <div class="col-lg-7">
+            <form method="POST" id="checkout-form">
+                <!-- ข้อมูลผู้สั่ง -->
+                <div class="checkout-card">
+                    <h4 class="section-title">
+                        <i class="fas fa-user"></i> ข้อมูลผู้สั่ง
+                    </h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                        <input type="text" name="customer_name" class="form-control" 
+                               required value="{{ session.get('full_name','') }}"
+                               placeholder="ระบุชื่อ-นามสกุลของคุณ">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+                        <input type="tel" name="customer_phone" class="form-control" 
+                               required pattern="[0-9]{10}"
+                               placeholder="08xxxxxxxx">
+                        <small class="text-muted">กรอกเบอร์โทร 10 หลัก</small>
+                    </div>
+                </div>
 
-    <form method="POST" id="checkout-form">
-        <!-- ชื่อ / เบอร์โทร -->
-        <div class="mb-3">
-            <label>ชื่อ-นามสกุล *</label>
-            <input type="text" name="customer_name" class="form-control" required value="{{ session.get('full_name','') }}">
-        </div>
-        <div class="mb-3">
-            <label>เบอร์โทรศัพท์ *</label>
-            <input type="tel" name="customer_phone" class="form-control" required>
+                <!-- วิธีรับสินค้า -->
+                <div class="checkout-card">
+                    <h4 class="section-title">
+                        <i class="fas fa-truck"></i> วิธีการรับสินค้า
+                    </h4>
+                    
+                    <div class="form-group">
+                        <select class="form-select" name="delivery_method" id="delivery-method" required>
+                            <option value="delivery">จัดส่งถึงบ้าน (ฟรีค่าจัดส่ง)</option>
+                            <option value="pickup">รับที่ร้าน (ประหยัดเวลา)</option>
+                        </select>
+                    </div>
+
+                    <!-- ที่อยู่จัดส่ง -->
+                    <div id="address-section">
+                        <label class="form-label">ที่อยู่จัดส่ง <span class="text-danger">*</span></label>
+                        
+                        {% if addresses %}
+                            <select class="form-select" name="customer_address">
+                                {% for addr in addresses %}
+                                <option value="{{ addr.id }}">{{ addr.full_address }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="mt-2">
+                                <a href="{{ url_for('add_address') }}" class="text-primary">
+                                    <i class="fas fa-plus"></i> เพิ่มที่อยู่ใหม่
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                คุณยังไม่มีที่อยู่ในระบบ 
+                                <a href="{{ url_for('add_address') }}" class="alert-link">กรุณาเพิ่มที่อยู่</a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- แสดงเมื่อเลือกรับที่ร้าน -->
+                    <div id="pickup-info" style="display: none;">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-store"></i> รับสินค้าที่ร้าน</h5>
+                            <p class="mb-1"><strong>Sweet Dreams Bakery</strong></p>
+                            <p class="mb-1">123 ถนนพหลโยธิน ตำบลเวียง อำเภอเมือง</p>
+                            <p class="mb-1">จังหวัดเชียงราย 57000</p>
+                            <p class="mb-0"><i class="fas fa-clock"></i> เปิดทุกวัน 07:00 - 20:00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- วิธีชำระเงิน -->
+                <div class="checkout-card">
+                    <h4 class="section-title">
+                        <i class="fas fa-credit-card"></i> วิธีชำระเงิน
+                    </h4>
+
+                    <div class="payment-method-card">
+                        <input type="radio" name="payment_method" value="promptpay" id="payment-promptpay" required>
+                        <label for="payment-promptpay" style="cursor: pointer; width: 100%;">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon me-3">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1">PromptPay</h5>
+                                    <small class="text-muted">สแกน QR Code ผ่านแอปธนาคาร</small>
+                                </div>
+                                <div class="text-success">
+                                    <i class="fas fa-check-circle" style="display: none;"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="payment-method-card">
+                        <input type="radio" name="payment_method" value="cod" id="payment-cod" required>
+                        <label for="payment-cod" style="cursor: pointer; width: 100%;">
+                            <div class="d-flex align-items-center">
+                                <div class="payment-icon me-3">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1">เก็บเงินปลายทาง (COD)</h5>
+                                    <small class="text-muted">ชำระเงินเมื่อได้รับสินค้า</small>
+                                </div>
+                                <div class="text-success">
+                                    <i class="fas fa-check-circle" style="display: none;"></i>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- หมายเหตุ -->
+                <div class="checkout-card">
+                    <h4 class="section-title">
+                        <i class="fas fa-comment"></i> หมายเหตุเพิ่มเติม
+                    </h4>
+                    <textarea name="notes" class="form-control" rows="3" 
+                              placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+                </div>
+
+                <!-- <button type="submit" class="btn btn-primary btn-lg w-100" style="padding: 15px; font-size: 1.1rem;">
+                    <i class="fas fa-shopping-bag"></i> ยืนยันคำสั่งซื้อ
+                </button> -->
+            </form>
         </div>
 
-        <!-- วิธีการรับสินค้า -->
-        <div class="mb-3">
-            <label>วิธีการรับสินค้า *</label>
-            <select class="form-select" name="delivery_method" required>
-                <option value="delivery">จัดส่งถึงบ้าน</option>
-                <option value="pickup">รับที่ร้าน</option>
-            </select>
-        </div>
+        <!-- สรุปคำสั่งซื้อ -->
+        <div class="col-lg-5">
+            <div class="order-summary">
+                <h4 class="mb-4">
+                    <i class="fas fa-receipt"></i> สรุปคำสั่งซื้อ
+                </h4>
 
-        <!-- ที่อยู่ (select จาก addresses) -->
-        <div class="mb-3" id="address-section">
-            <label>ที่อยู่จัดส่ง *</label>
-            <select class="form-select" name="customer_address">
-                {% for addr in addresses %}
-                <option value="{{ addr.id }}">{{ addr.full_address }}</option>
-                {% endfor %}
-            </select>
-        </div>
+                <div class="cart-items mb-3">
+                    {% for key, item in cart_items.items() %}
+                    <div class="summary-item">
+                        <div>
+                            <strong>{{ item.name }}</strong>
+                            {% if item.options %}
+                            <br><small style="opacity: 0.8;">{{ item.options }}</small>
+                            {% endif %}
+                            <br><small style="opacity: 0.8;">x{{ item.quantity }}</small>
+                        </div>
+                        <div class="text-end">
+                            <strong>฿{{ "{:,.0f}".format(item.price * item.quantity) }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
 
-        <!-- Payment Method -->
-        <div class="mb-3">
-            <label>วิธีชำระเงิน *</label>
-            <select class="form-select" name="payment_method" required>
-                <option value="cod">เก็บเงินปลายทาง (COD)</option>
-                <option value="promptpay">PromptPay</option>
-            </select>
-        </div>
+                <div class="summary-item">
+                    <span>จำนวนสินค้า</span>
+                    <strong>{{ total_items }} ชิ้น</strong>
+                </div>
 
-        <!-- หมายเหตุ -->
-        <div class="mb-3">
-            <label>หมายเหตุเพิ่มเติม</label>
-            <textarea name="notes" class="form-control"></textarea>
-        </div>
+                <div class="summary-item">
+                    <span>ค่าจัดส่ง</span>
+                    <strong class="text-success">ฟรี</strong>
+                </div>
 
-        <button type="submit" class="btn btn-primary">สั่งซื้อเลย</button>
-    </form>
+                <div class="summary-total">
+                    <div class="d-flex justify-content-between">
+                        <span>ยอดรวมทั้งหมด</span>
+                        <span>฿{{ "{:,.2f}".format(total_price) }}</span>
+                    </div>
+                </div>
+
+                <button type="submit" form="checkout-form" class="btn-checkout">
+                    <i class="fas fa-lock"></i> ชำระเงินอย่างปลอดภัย
+                </button>
+
+                <div class="text-center mt-3" style="opacity: 0.8;">
+                    <small>
+                        <i class="fas fa-shield-alt"></i>
+                        ข้อมูลของคุณได้รับการปกป้องอย่างปลอดภัย
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // ซ่อนที่อยู่ถ้าเลือก pickup
-    const deliverySelect = document.querySelector('select[name="delivery_method"]');
+    // จัดการ delivery method
+    const deliverySelect = document.getElementById('delivery-method');
     const addressSection = document.getElementById('address-section');
+    const pickupInfo = document.getElementById('pickup-info');
 
     deliverySelect.addEventListener('change', function() {
         if (this.value === 'pickup') {
             addressSection.style.display = 'none';
+            pickupInfo.style.display = 'block';
             addressSection.querySelector('select').required = false;
         } else {
             addressSection.style.display = 'block';
+            pickupInfo.style.display = 'none';
             addressSection.querySelector('select').required = true;
         }
     });
+
+    // จัดการ payment method selection
+    function selectPayment(method) {
+        // Remove active class from all
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+            card.classList.remove('active');
+            card.querySelector('.fa-check-circle').style.display = 'none';
+        });
+
+        // Add active class to selected
+        const selectedCard = document.getElementById('payment-' + method).closest('.payment-method-card');
+        selectedCard.classList.add('active');
+        selectedCard.querySelector('.fa-check-circle').style.display = 'block';
+
+        // Check the radio button
+        document.getElementById('payment-' + method).checked = true;
+    }
+
+    // Initialize with COD selected
+    selectPayment('cod');
+
+    // Form validation
+    document.getElementById('checkout-form').addEventListener('submit', function(e) {
+        const phone = document.querySelector('input[name="customer_phone"]').value;
+        
+        if (!/^[0-9]{10}$/.test(phone)) {
+            e.preventDefault();
+            alert('กรุณาระบุเบอร์โทรศัพท์ 10 หลัก');
+            return false;
+        }
+
+        // ถ้าเลือก delivery แต่ไม่มีที่อยู่
+        if (deliverySelect.value === 'delivery') {
+            const addressSelect = document.querySelector('select[name="customer_address"]');
+            if (!addressSelect || !addressSelect.value) {
+                e.preventDefault();
+                alert('กรุณาเพิ่มที่อยู่สำหรับการจัดส่ง');
+                return false;
+            }
+        }
+    });
+
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            // ล้าง active ของทุกการ์ด
+            document.querySelectorAll('.payment-method-card').forEach(card => {
+                card.classList.remove('active');
+                card.querySelector('.fa-check-circle').style.display = 'none';
+            });
+
+            // ใส่ active ให้การ์ดที่เลือก
+            const selectedCard = this.closest('.payment-method-card');
+            selectedCard.classList.add('active');
+            selectedCard.querySelector('.fa-check-circle').style.display = 'block';
+        });
+    });
+
+    // กำหนดค่าเริ่มต้นเป็น COD
+    const defaultRadio = document.getElementById('payment-cod');
+    defaultRadio.checked = true;
+    defaultRadio.dispatchEvent(new Event('change'));
 </script>
 {% endblock %}

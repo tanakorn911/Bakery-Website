@@ -579,6 +579,199 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 9999;
 }
 
+/* ================= Category Buttons ================= */
+.category-filter,
+.d-flex.flex-wrap.gap-2 .btn {
+    border-radius: 50px; /* ปุ่มโค้งมน */
+    padding: 0.5rem 1.2rem;
+    font-weight: 500;
+    border: 1px solid #8B4513;
+    color: #8B4513;
+    background-color: transparent !important; /* ลบสีพื้นหลังทั้งหมด */
+    transition: all 0.3s ease;
+}
+
+/* icon spacing */
+.category-filter i,
+.d-flex.flex-wrap.gap-2 .btn i {
+    font-size: 0.9rem;
+    margin-right: 0.3rem;
+}
+
+/* hover / active */
+.category-filter:hover,
+.category-filter.active,
+.d-flex.flex-wrap.gap-2 .btn:hover,
+.d-flex.flex-wrap.gap-2 .btn.active {
+    background-color: #8B4513 !important; /* พื้นหลังเมื่อ hover/active */
+    color: #fff !important; /* ตัวอักษรสีขาว */
+    border-color: #8B4513 !important;
+}
+
+/* flex container spacing */
+.d-flex.flex-wrap.justify-content-center.gap-2,
+.d-flex.flex-wrap.gap-2 {
+    gap: 0.5rem;
+}
+
+/* responsive */
+@media (max-width: 576px) {
+    .category-filter,
+    .d-flex.flex-wrap.gap-2 .btn {
+        flex: 1 1 48%;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 1rem;
+    }
+}
+
+/* ================= Breadcrumb ================= */
+.breadcrumb {
+    background-color: transparent; /* ลบสีพื้นหลัง */
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item a {
+    color: #8B4513;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.breadcrumb-item a:hover {
+    color: #5A2D0C; /* สีน้ำตาลเข้มเมื่อ hover */
+}
+
+/* ================= Category Buttons ================= */
+.category-filter {
+    border-radius: 50px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid #8B4513;
+    color: #8B4513;
+    background-color: transparent !important;
+}
+
+.category-filter:hover,
+.category-filter.active {
+    background-color: #8B4513 !important;
+    color: #fff !important;
+    border-color: #8B4513 !important;
+}
+
+.category-filter i {
+    font-size: 0.9rem;
+}
+
+/* ================= Search Bar ================= */
+#search-input,
+#search-products {
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    border: 1px solid #8B4513;
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+#search-input:focus,
+#search-products:focus {
+    border-color: #8B4513;
+    box-shadow: 0 0 5px rgba(139,69,19,0.3);
+}
+
+.input-group-text {
+    border-radius: 50px 0 0 50px;
+    background-color: #f8f9fa;
+    border-right: 0;
+    color: #8B4513;
+}
+
+/* ================= Sort & View Buttons ================= */
+#sort-products {
+    border-radius: 50px;
+    border: 1px solid #8B4513;
+    max-width: 200px;
+    color: #8B4513;
+}
+
+#sort-products:focus {
+    border-color: #8B4513;
+    box-shadow: 0 0 5px rgba(139,69,19,0.3);
+}
+
+#view-grid, #view-list {
+    border-radius: 50px;
+    border: 1px solid #8B4513;
+    color: #8B4513;
+    background-color: transparent !important;
+    transition: all 0.3s ease;
+}
+
+#view-grid:hover, #view-list:hover {
+    background-color: #8B4513 !important;
+    color: #fff !important;
+    border-color: #8B4513 !important;
+}
+
+/* ================= Other Categories Buttons ================= */
+.d-flex.flex-wrap.gap-2 .btn {
+    border-radius: 50px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 500;
+    border: 1px solid #8B4513;
+    color: #8B4513;
+    background-color: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.d-flex.flex-wrap.gap-2 .btn:hover {
+    background-color: #8B4513 !important;
+    color: #fff !important;
+    border-color: #8B4513 !important;
+}
+
+.d-flex.flex-wrap.gap-2 .btn.btn-outline-secondary {
+    border-color: #8B4513;
+    color: #8B4513;
+    background-color: transparent !important;
+}
+
+.d-flex.flex-wrap.gap-2 .btn.btn-outline-secondary:hover {
+    background-color: #8B4513 !important;
+    color: #fff !important;
+    border-color: #8B4513 !important;
+}
+
+.d-flex.flex-wrap.gap-2 .btn i {
+    font-size: 0.9rem;
+}
+
+/* ================= Flex container spacing ================= */
+.d-flex.flex-wrap.justify-content-center.gap-2 {
+    gap: 0.5rem;
+}
+
+/* ================= Responsive ================= */
+@media (max-width: 576px) {
+    .category-filter,
+    .d-flex.flex-wrap.gap-2 .btn {
+        flex: 1 1 48%;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 1rem;
+    }
+
+    #sort-products {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    #view-grid, #view-list {
+        flex: 1 1 48%;
+    }
+}
+
 /* Animations */
 @keyframes fadeInUp {
     from {
