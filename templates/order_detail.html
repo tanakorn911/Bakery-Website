@@ -386,7 +386,7 @@
         {% endif %}
 
         <!-- ปุ่มสั่งซื้ออีกครั้ง -->
-        {% if order.status in ['completed', 'cancelled'] %}
+        {% if order.status in 'completed' %}
         <button class="btn btn-primary" onclick="reorder({{ order.id }})">
             <i class="fas fa-redo"></i> สั่งซื้ออีกครั้ง
         </button>

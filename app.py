@@ -1157,8 +1157,8 @@ def order_detail(order_id):
             SELECT *,
                    address || 
                    CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
-                   CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
-                   CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END
+                   CASE WHEN province IS NOT NULL THEN ', ' || province ELSE '' END   ||          
+                   CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END 
                    AS full_address
             FROM addresses
             WHERE user_id = ?
@@ -1247,42 +1247,65 @@ def cancel_order(order_id):
 
 @app.route('/reorder/<int:order_id>', methods=['POST'])
 def reorder(order_id):
+    # ตรวจสอบว่าผู้ใช้ล็อกอินหรือยัง
     if not session.get('user_id'):
         return jsonify({'success': False, 'message': 'กรุณาเข้าสู่ระบบ'})
+
     conn = get_db_connection()
+
+    # ดึงรายการสินค้าและข้อมูลที่จำเป็น รวมถึงรูปภาพ
     order_items = conn.execute("""
-        SELECT oi.product_id, oi.quantity, oi.options, p.name, p.price, p.is_available
+        SELECT 
+            oi.product_id, 
+            oi.quantity, 
+            oi.options, 
+            p.name, 
+            p.price, 
+            p.is_available,
+            p.image
         FROM order_items oi
         JOIN products p ON oi.product_id = p.id
         JOIN orders o ON oi.order_id = o.id
         WHERE o.id = ? AND o.user_id = ?
     """, (order_id, session.get('user_id'))).fetchall()
     conn.close()
+
     if not order_items:
         return jsonify({'success': False, 'message': 'ไม่พบข้อมูลคำสั่งซื้อ'})
+
+    # โหลด cart ปัจจุบันจาก session หรือสร้างใหม่
     cart = session.get('cart', {})
     added_items = 0
+
     for item in order_items:
         if not item['is_available']:
-            continue
+            continue  # ข้ามสินค้าที่ไม่พร้อมจำหน่าย
+
+        # สร้าง key สำหรับ cart (รวม options ถ้ามี)
         cart_key = f"{item['product_id']}_{item['options']}" if item['options'] else str(item['product_id'])
+
+        # เพิ่มสินค้าลง cart พร้อมรูป
         cart[cart_key] = {
             'id': item['product_id'],
             'name': item['name'],
             'price': float(item['price']),
             'quantity': item['quantity'],
-            'options': item['options'] or ''
+            'options': item['options'] or '',
+            'image': item['image'] or ''  # เพิ่มตรงนี้เพื่อแสดงรูป
         }
         added_items += 1
+
+    # บันทึก cart กลับไป session
     session['cart'] = cart
+
     if added_items > 0:
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': f'เพิ่ม {added_items} รายการลงตะกร้าแล้ว'
         })
     else:
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': 'ไม่มีสินค้าที่สามารถเพิ่มได้ (สินค้าอาจหมดหรือไม่พร้อมจำหน่าย)'
         })
 
