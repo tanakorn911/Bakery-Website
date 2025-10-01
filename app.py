@@ -16,6 +16,7 @@ app.secret_key = "sweetdreams_bakery_secret_2024"
 app.permanent_session_lifetime = timedelta(days=7)
 DB_NAME = "bakery.db"
 
+
 @app.template_filter('to_bangkok')
 def to_bangkok_filter(value, fmt='%d/%m/%Y %H:%M'):
     if not value:
@@ -117,7 +118,7 @@ def init_db():
     order_id INTEGER NOT NULL,
     payment_method TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
-    status TEXT DEFAULT 'unpaid',
+    status TEXT DEFAULT 'pending',
     slip_image TEXT,
     paid_at TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
@@ -255,8 +256,10 @@ def create_default_images_folder():
         os.makedirs(images_path, exist_ok=True)
         print(f"Created images folder: {images_path}")
 
-UPLOAD_FOLDER = 'static/uploads/slips'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+UPLOAD_FOLDER1 = 'static/uploads/slips'
+UPLOAD_FOLDER2 = 'static/images/products'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+MAX_FILE_SIZE = 2 * 1024 * 1024 
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -277,24 +280,28 @@ def upload_slip(order_id):
         ext = file.filename.rsplit('.', 1)[1].lower()
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         filename = f"slip_{order_id}_{timestamp}.{ext}"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        filepath = os.path.join(UPLOAD_FOLDER1, filename)
 
         # สร้างโฟลเดอร์ถ้ายังไม่มี
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        os.makedirs(UPLOAD_FOLDER1, exist_ok=True)
 
         # บันทึกไฟล์
         file.save(filepath)
 
-        # อัปเดต DB
+        # อัปเดต DB: กำหนด status เป็น 'verifying'
         conn = get_db_connection()
-        conn.execute("UPDATE payments SET slip_image=? , status='verifying' WHERE order_id=?",
-                     (filename, order_id))
+        conn.execute("""
+            UPDATE payments
+            SET slip_image = ?, status = 'verifying'
+            WHERE order_id = ?
+        """, (filename, order_id))
         conn.commit()
         conn.close()
 
         return jsonify({'success': True, 'message': 'อัปโหลดสลิปเรียบร้อย', 'filename': filename})
     else:
         return jsonify({'success': False, 'message': 'ไฟล์ต้องเป็น PNG, JPG, JPEG'}), 400
+
 # ========================
 # Helper Functions
 # ========================
@@ -388,6 +395,7 @@ def get_all_payments():
             p.payment_method,
             p.amount,
             p.status AS payment_status,
+            p.slip_image,
             p.paid_at,
             o.customer_name,
             o.customer_phone,
@@ -404,7 +412,21 @@ def get_all_payments():
     rows = cur.fetchall()
     conn.close()
 
-    return [dict(row) for row in rows]
+    payments = [dict(row) for row in rows]
+
+    # กำหนดค่า default ป้องกัน key หาย
+    for p in payments:
+        p.setdefault('payment_status', 'pending')   # ← ใช้ payment_status แทน status
+        p.setdefault('slip_image', None)
+        p.setdefault('payment_method', 'cod')
+        p.setdefault('amount', 0)
+        p.setdefault('customer_name', 'ไม่ระบุ')
+        p.setdefault('customer_phone', '-')
+        p.setdefault('paid_at', None)
+        p.setdefault('order_status', 'pending')
+        p.setdefault('order_created', datetime.now())
+
+    return payments
 
 # ========================
 # Context Processor
@@ -706,7 +728,6 @@ def checkout():
     conn = get_db_connection()
     addresses = conn.execute("""
         SELECT id,
-               recipient_name || ', ' ||
                address || 
                CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
                CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
@@ -876,8 +897,8 @@ def confirm_payment(order_id):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         filename = f"slip_{order_id}_{timestamp}.{ext}"
         
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
+        os.makedirs(UPLOAD_FOLDER1, exist_ok=True)
+        filepath = os.path.join(UPLOAD_FOLDER1, secure_filename(filename))
         
         with open(filepath, 'wb') as f:
             f.write(file_data)
@@ -923,9 +944,20 @@ def check_payment_method(order_id):
     
     return f"Order ID: {order['id']} - payment_method: {order['payment_method']}"
 
+def get_payment_counts():
+    conn = get_db_connection()
+    counts = conn.execute("""
+        SELECT 
+            SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending_count,
+            SUM(CASE WHEN status='verifying' THEN 1 ELSE 0 END) AS verifying_count,
+            SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) AS paid_count
+        FROM payments
+    """).fetchone()
+    conn.close()
+    return counts['pending_count'], counts['verifying_count'], counts['paid_count']
+
 @app.route('/admin/verify_payment/<int:order_id>', methods=['POST'])
 def admin_verify_payment(order_id):
-    """ยืนยันการชำระเงิน (สำหรับแอดมิน)"""
     if session.get('role') != 'admin':
         return jsonify({'success': False, 'message': 'ไม่มีสิทธิ์เข้าถึง'})
     
@@ -935,13 +967,14 @@ def admin_verify_payment(order_id):
     conn = get_db_connection()
     
     try:
+        message = None  # ป้องกัน error กรณี action ไม่ถูกต้อง
+
         if action == 'approve':
-            # อนุมัติการชำระเงิน
             conn.execute("""
                 UPDATE payments 
-                SET status = 'paid'
+                SET status = 'paid', paid_at = ?
                 WHERE order_id = ?
-            """, (order_id,))
+            """, (datetime.now(), order_id))
             
             conn.execute("""
                 UPDATE orders 
@@ -950,8 +983,8 @@ def admin_verify_payment(order_id):
             """, (order_id,))
             
             message = 'อนุมัติการชำระเงินเรียบร้อย'
-        else:
-            # ปฏิเสธการชำระเงิน
+
+        elif action == 'reject':
             conn.execute("""
                 UPDATE payments 
                 SET status = 'rejected'
@@ -965,13 +998,17 @@ def admin_verify_payment(order_id):
             """, (order_id,))
             
             message = 'ปฏิเสธการชำระเงิน'
+
+        else:
+            return jsonify({'success': False, 'message': 'action ไม่ถูกต้อง'}), 400
         
         conn.commit()
-        
         return jsonify({'success': True, 'message': message})
+    
     except Exception as e:
         conn.rollback()
         return jsonify({'success': False, 'message': str(e)})
+    
     finally:
         conn.close()
 
@@ -1689,31 +1726,37 @@ def admin_order_history():
 
 @app.route('/admin/payments')
 def admin_payments():
-    # ตรวจสอบสิทธิ์ admin
     if session.get('role') != 'admin':
         return "ไม่มีสิทธิ์เข้าถึง", 403
 
-    # ดึงข้อมูล payments จาก database
-    payments = get_all_payments()  # สมมติฟังก์ชันนี้คืน list ของ dict
+    payments = get_all_payments()
 
-    # กำหนดค่า default สำหรับ key ที่อาจหายไป
+    # ค่า default กัน key หาย
     for p in payments:
-        p.setdefault('status', 'pending')      # ถ้าไม่มี status -> pending
-        p.setdefault('amount', 0)             # ถ้าไม่มี amount -> 0
-        p.setdefault('payment_method', 'cod') # ถ้าไม่มี payment_method -> เก็บเงินปลายทาง
+        p.setdefault('status', 'pending')
+        p.setdefault('amount', 0)
+        p.setdefault('payment_method', 'cod')
         p.setdefault('customer_name', 'ไม่ระบุ')
         p.setdefault('customer_phone', '-')
         p.setdefault('created_at', datetime.now())
         p.setdefault('paid_at', None)
         p.setdefault('slip_image', None)
 
-    # นับสถิติ
-    pending_count = sum(1 for p in payments if p.get('status') == 'pending')
-    verifying_count = sum(1 for p in payments if p.get('status') == 'verifying')
-    paid_count = sum(1 for p in payments if p.get('status') == 'paid')
-    total_amount = sum(p.get('amount', 0) for p in payments)
+    # ====== นับตามสถานะ ======
+    pending_count = sum(1 for p in payments if p.get('payment_status') == 'pending')
+    verifying_count = sum(1 for p in payments if p.get('payment_status') == 'verifying')
+    paid_count = sum(
+        1 for p in payments
+        if (p.get('payment_method') == 'promptpay' and p.get('payment_status') == 'paid')
+        or (p.get('payment_method') == 'cod' and p.get('order_status') == 'delivered')
+    )
 
-    # ส่งข้อมูลไปยัง template
+    total_amount = sum(
+        p.get('amount', 0) for p in payments
+        if (p.get('payment_method') == 'promptpay' and p.get('payment_status') == 'paid')
+        or (p.get('payment_method') == 'cod' and p.get('order_status') == 'delivered')
+    )
+
     return render_template(
         'admin_payments.html',
         payments=payments,
@@ -1746,17 +1789,31 @@ def add_product():
     if session.get('role') != 'admin':
         flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
         return redirect(url_for("index"))
-    
-    data = request.get_json()
+
+    name = request.form.get('name')
+    name_en = request.form.get('name_en')
+    description = request.form.get('description')
+    price = request.form.get('price', type=float)
+    category_id = request.form.get('category_id', type=int)
+    is_available = 1 if request.form.get('is_available') == '1' else 0
+    is_featured = 1 if request.form.get('is_featured') == '1' else 0
+    stock_quantity = request.form.get('stock_quantity', type=int, default=0)
+
+    # Handle image upload
+    image_file = request.files.get('image')
+    image_filename = None
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(image_file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER2, filename)
+        image_file.save(filepath)
+        image_filename = filename
+
     conn = get_db_connection()
     conn.execute('''
-        INSERT INTO products (name, name_en, description, price, image, category_id, is_available, is_featured, stock_quantity)
+        INSERT INTO products 
+        (name, name_en, description, price, image, category_id, is_available, is_featured, stock_quantity)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        data['name'], data.get('name_en'), data.get('description'), data['price'],
-        data.get('image'), data['category_id'], data.get('is_available', 0),
-        data.get('is_featured', 0), data.get('stock_quantity', 0)
-    ))
+    ''', (name, name_en, description, price, image_filename, category_id, is_available, is_featured, stock_quantity))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -1767,19 +1824,39 @@ def update_product(product_id):
     if session.get('role') != 'admin':
         flash("คุณไม่มีสิทธิ์เข้าถึงหน้านี้", "danger")
         return redirect(url_for("index"))
-    
-    data = request.get_json()
+
+    name = request.form.get('name')
+    name_en = request.form.get('name_en')
+    description = request.form.get('description')
+    price = request.form.get('price', type=float)
+    category_id = request.form.get('category_id', type=int)
+    is_available = 1 if request.form.get('is_available') == '1' else 0
+    is_featured = 1 if request.form.get('is_featured') == '1' else 0
+    stock_quantity = request.form.get('stock_quantity', type=int, default=0)
+
     conn = get_db_connection()
-    conn.execute('''
-        UPDATE products SET 
+
+    # Handle image upload
+    image_file = request.files.get('image')
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(image_file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER2, filename)
+        image_file.save(filepath)
+        conn.execute('''
+            UPDATE products SET 
             name=?, name_en=?, description=?, price=?, image=?, 
             category_id=?, is_available=?, is_featured=?, stock_quantity=?
-        WHERE id=?
-    ''', (
-        data['name'], data.get('name_en'), data.get('description'), data['price'],
-        data.get('image'), data['category_id'], data.get('is_available', 0),
-        data.get('is_featured', 0), data.get('stock_quantity', 0), product_id
-    ))
+            WHERE id=?
+        ''', (name, name_en, description, price, filename, category_id, is_available, is_featured, stock_quantity, product_id))
+    else:
+        # ไม่เปลี่ยนรูป
+        conn.execute('''
+            UPDATE products SET 
+            name=?, name_en=?, description=?, price=?, 
+            category_id=?, is_available=?, is_featured=?, stock_quantity=?
+            WHERE id=?
+        ''', (name, name_en, description, price, category_id, is_available, is_featured, stock_quantity, product_id))
+
     conn.commit()
     conn.close()
     return jsonify({'success': True})
@@ -2202,32 +2279,48 @@ def admin_delete_order(order_id):
 # ========================
 
 if __name__ == "__main__":
-    print("Initializing Sweet Dreams Bakery...")
+    import time
+    from colorama import Fore, Style, init
+    
+    init(autoreset=True)
+
+    print(Fore.CYAN + Style.BRIGHT + "\nInitializing Sweet Dreams Bakery...\n")
+    time.sleep(0.5)
+
     init_db()
-    print("Database initialized")
+    print(Fore.GREEN + "   ✅ Database initialized")
+
     seed_categories()
-    print("Categories seeded")
+    print(Fore.GREEN + "   ✅ Categories seeded")
+
     seed_products()
-    print("Products seeded")
+    print(Fore.GREEN + "   ✅ Products seeded")
+
     create_admin_user()
-    print("Admin user created")
+    print(Fore.GREEN + "   ✅ Admin user created")
+
     create_default_images_folder()
-    print("Images folder created")
-    print("\n" + "="*50)
-    print("Sweet Dreams Bakery Server Starting...")
-    print("="*50)
-    print("Main Website: http://localhost:5000")
-    print("Admin Panel: http://localhost:5000/admin")
-    print("Manage Orders: http://localhost:5000/admin/orders")
-    print("Admin Login: username=admin, password=admin123")
-    print("="*50)
-    print("Features Available:")
-    print("   ✅ Product Management (Add/Edit/Delete)")
-    print("   ✅ Order Management")
-    print("   ✅ User Authentication")
-    print("   ✅ Shopping Cart")
-    print("   ✅ User Profiles")
-    print("   ✅ Order History")
-    print("   ✅ Responsive Design")
-    print("="*50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print(Fore.GREEN + "   ✅ Images folder created")
+
+    print("\n" + Fore.MAGENTA + "=" * 60)
+    print(Fore.YELLOW + Style.BRIGHT + "🍰 Sweet Dreams Bakery Server Starting... 🚀")
+    print(Fore.MAGENTA + "=" * 60)
+
+    print(Fore.CYAN + "🌐 Main Website: " + Fore.WHITE + "http://localhost:5000")
+    print(Fore.CYAN + "🛠  Admin Panel: " + Fore.WHITE + "http://localhost:5000/admin")
+    print(Fore.CYAN + "📦 Manage Orders: " + Fore.WHITE + "http://localhost:5000/admin/orders")
+    print(Fore.CYAN + "🔑 Admin Login: " + Fore.WHITE + "username=" + Fore.YELLOW + "admin" +
+          Fore.WHITE + ", password=" + Fore.YELLOW + "admin123")
+
+    print(Fore.MAGENTA + "=" * 60)
+    print(Fore.YELLOW + "✨ Features Available ✨")
+    print(Fore.GREEN + "   ✔ Product Management (Add/Edit/Delete)")
+    print(Fore.GREEN + "   ✔ Order Management")
+    print(Fore.GREEN + "   ✔ User Authentication")
+    print(Fore.GREEN + "   ✔ Shopping Cart")
+    print(Fore.GREEN + "   ✔ User Profiles")
+    print(Fore.GREEN + "   ✔ Order History")
+    print(Fore.GREEN + "   ✔ Responsive Design")
+    print(Fore.MAGENTA + "=" * 60 + "\n")
+
+    app.run(debug=True, host="0.0.0.0", port=5000)

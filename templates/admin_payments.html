@@ -292,8 +292,8 @@
     
     <div id="payments-container">
         {% if payments %}
-            {% for payment in payments %}
-            <div class="payment-card" data-status="{{ payment.status }}">
+        {% for payment in payments %}
+            <div class="payment-card" data-status="{{ payment.payment_status }}" data-order-id="{{ payment.order_id }}" data-amount="{{ payment.amount }}">
                 <div class="payment-header">
                     <div>
                         <span class="order-badge">
@@ -301,14 +301,14 @@
                         </span>
                     </div>
                     <div>
-                        <span class="status-badge status-{{ payment.status }}">
-                            {% if payment.status == 'pending' %}
-                                <i class="fas fa-clock"></i> รอชำระเงิน
-                            {% elif payment.status == 'verifying' %}
-                                <i class="fas fa-sync fa-spin"></i> รอตรวจสอบ
-                            {% elif payment.status == 'paid' %}
+                        <span class="status-badge status-{{ payment.payment_status }}">
+                            {% if payment.payment_status == 'pending' %}
+                                <i class="fas fa-clock"></i> รอตรวจสอบ
+                            {% elif payment.payment_status == 'verifying' %}
+                                <i class="fas fa-sync fa-spin"></i> กำลังตรวจสอบ
+                            {% elif payment.payment_status == 'paid' %}
                                 <i class="fas fa-check-circle"></i> ชำระแล้ว
-                            {% elif payment.status == 'rejected' %}
+                            {% elif payment.payment_status == 'rejected' %}
                                 <i class="fas fa-times-circle"></i> ปฏิเสธ
                             {% endif %}
                         </span>
@@ -351,7 +351,7 @@
                     <div class="detail-item">
                         <div class="detail-label">วันที่สั่งซื้อ</div>
                         <div class="detail-value">
-                            <i class="fas fa-calendar"></i> {{ payment.created_at|to_bangkok('%d/%m/%Y %H:%M') }}
+                            <i class="fas fa-calendar"></i> {{ payment.order_created|to_bangkok('%d/%m/%Y %H:%M') }}
                         </div>
                     </div>
                     
@@ -365,16 +365,16 @@
                     {% endif %}
                 </div>
                 
-                {% if payment.payment_method == 'promptpay' and payment.status in ['verifying', 'pending'] %}
+                {% if payment.payment_method == 'promptpay' %}
                 <div class="slip-preview">
                     <h5><i class="fas fa-image"></i> หลักฐานการโอนเงิน</h5>
                     {% if payment.slip_image %}
                     <img src="{{ url_for('static', filename='uploads/slips/' + payment.slip_image) }}"
-                         class="slip-image" 
-                         alt="Payment Slip"
-                         data-bs-toggle="modal" 
-                         data-bs-target="#slipModal{{ payment.order_id }}"
-                         onerror="this.src='https://via.placeholder.com/400x500/dc3545/ffffff?text=Error+Loading+Image'">
+                        class="slip-image" 
+                        alt="Payment Slip"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#slipModal{{ payment.order_id }}"
+                        onerror="this.src='https://via.placeholder.com/400x500/dc3545/ffffff?text=Error+Loading+Image'">
                     <p class="text-muted mt-2">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
                     {% else %}
                     <div class="alert alert-warning">
@@ -383,6 +383,7 @@
                     {% endif %}
                 </div>
                 
+                {% if payment.payment_status in ['pending', 'verifying'] %}
                 <div class="action-buttons">
                     <button class="btn btn-reject" onclick="verifyPayment({{ payment.order_id }}, 'reject')">
                         <i class="fas fa-times"></i> ปฏิเสธ
@@ -391,6 +392,7 @@
                         <i class="fas fa-check"></i> อนุมัติ
                     </button>
                 </div>
+                {% endif %}
                 {% endif %}
                 
                 <div class="d-flex justify-content-start mt-3">
@@ -412,9 +414,9 @@
                         <div class="modal-body text-center">
                             {% if payment.slip_image %}
                             <img src="{{ url_for('static', filename='uploads/slips/' + payment.slip_image) }}"
-                                 class="modal-image" 
-                                 alt="Payment Slip"
-                                 onerror="this.src='https://via.placeholder.com/600x800/dc3545/ffffff?text=Error+Loading+Image'">
+                                class="modal-image" 
+                                alt="Payment Slip"
+                                onerror="this.src='https://via.placeholder.com/600x800/dc3545/ffffff?text=Error+Loading+Image'">
                             <div class="mt-3">
                                 <p><strong>ยอดชำระ:</strong> ฿{{ "{:,.0f}".format(payment.amount) }}</p>
                                 <p><strong>วันที่โอน:</strong> {{ payment.paid_at|to_bangkok('%d/%m/%Y %H:%M') if payment.paid_at else 'N/A' }}</p>
@@ -428,7 +430,9 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
                             {% if payment.slip_image %}
-                            <a href="{{ payment.slip_image }}" download="slip_order_{{ payment.order_id }}.png" class="btn btn-primary">
+                            <a href="{{ url_for('static', filename='uploads/slips/' + payment.slip_image) }}" 
+                            download="slip_order_{{ payment.order_id }}.png" 
+                            class="btn btn-primary">
                                 <i class="fas fa-download"></i> ดาวน์โหลด
                             </a>
                             {% endif %}
@@ -436,7 +440,7 @@
                     </div>
                 </div>
             </div>
-            {% endfor %}
+        {% endfor %}
         {% else %}
             <div class="empty-state">
                 <div class="empty-icon">
@@ -456,12 +460,10 @@
     
     filterTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            // Remove active class from all tabs
             filterTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
             const filter = tab.dataset.filter;
-            
             paymentCards.forEach(card => {
                 if (filter === 'all' || card.dataset.status === filter) {
                     card.style.display = 'block';
@@ -475,30 +477,72 @@
     // Verify payment function
     function verifyPayment(orderId, action) {
         const actionText = action === 'approve' ? 'อนุมัติ' : 'ปฏิเสธ';
-        
-        if (!confirm(`ยืนยัน${actionText}การชำระเงินสำหรับคำสั่งซื้อ #${orderId}?`)) {
-            return;
-        }
-        
+        if (!confirm(`ยืนยัน${actionText}การชำระเงินสำหรับคำสั่งซื้อ #${orderId}?`)) return;
+
         fetch(`/admin/verify_payment/${orderId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ action: action })
         })
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
             if (data.success) {
                 alert(data.message);
-                location.reload();
+
+                const card = document.querySelector(`.payment-card[data-order-id="${orderId}"]`);
+                if (card) {
+                    const badge = card.querySelector('.status-badge');
+                    const actionBtns = card.querySelector('.action-buttons');
+
+                    // อัปเดต status badge
+                    if (action === 'approve') {
+                        badge.textContent = 'ชำระแล้ว';
+                        badge.className = 'status-badge status-paid';
+                    } else {
+                        badge.textContent = 'ปฏิเสธ';
+                        badge.className = 'status-badge status-rejected';
+                    }
+
+                    // ซ่อนปุ่ม action
+                    if (actionBtns) actionBtns.remove();
+                }
+
+                // ---- อัปเดต stat card ด้านบน ----
+                const pendingCard = document.querySelector('.stats-grid .stat-card:nth-child(1) .stat-value');
+                const verifyingCard = document.querySelector('.stats-grid .stat-card:nth-child(2) .stat-value');
+                const paidCard = document.querySelector('.stats-grid .stat-card:nth-child(3) .stat-value');
+                const totalCard = document.querySelector('.stats-grid .stat-card:nth-child(4) .stat-value');
+
+                let pending = parseInt(pendingCard.textContent) || 0;
+                let verifying = parseInt(verifyingCard.textContent) || 0;
+                let paid = parseInt(paidCard.textContent) || 0;
+                let total = parseFloat(totalCard.textContent.replace(/[^0-9.-]+/g,"")) || 0;
+                const amount = parseFloat(card.dataset.amount || 0);
+
+                // ปรับค่า
+                if (action === 'approve') {
+                    if (card.dataset.status === 'pending') pending--;
+                    if (card.dataset.status === 'verifying') verifying--;
+                    paid++;
+                    total += amount;
+                } else {
+                    if (card.dataset.status === 'pending') pending--;
+                    if (card.dataset.status === 'verifying') verifying--;
+                }
+
+                // อัปเดตตัวเลขใน stat card
+                pendingCard.textContent = pending;
+                verifyingCard.textContent = verifying;
+                paidCard.textContent = paid;
+                totalCard.textContent = '฿' + total.toLocaleString('en-US', {maximumFractionDigits:0});
+                
+                // อัปเดต data-status ของ card
+                card.dataset.status = action === 'approve' ? 'paid' : 'rejected';
             } else {
                 alert('เกิดข้อผิดพลาด: ' + data.message);
             }
         })
-        .catch(error => {
-            alert('เกิดข้อผิดพลาด: ' + error);
-        });
+        .catch(err => alert('เกิดข้อผิดพลาด: ' + err));
     }
     
     // Auto refresh every 30 seconds

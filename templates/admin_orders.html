@@ -251,13 +251,22 @@ function updateOrderStatus(orderId, newStatus) {
 function updateActionButtons(row, status){
     let buttons = `<button class="btn btn-outline-primary btn-action" onclick="viewOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="ดูรายละเอียด"><i class="fas fa-eye"></i></button>
                    <button class="btn btn-outline-secondary btn-action" onclick="printOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="พิมพ์"><i class="fas fa-print"></i></button>`;
+    
+    // สำหรับ pending
     if(status=='pending'){
         buttons = `<button class="btn btn-outline-success btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'processing')" data-bs-toggle="tooltip" title="รับออเดอร์"><i class="fas fa-check"></i></button>
                    <button class="btn btn-outline-danger btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'cancelled')" data-bs-toggle="tooltip" title="ยกเลิกออเดอร์"><i class="fas fa-times"></i></button>` + buttons;
-    } else if(status=='processing'){
+    } 
+    // สำหรับ processing
+    else if(status=='processing'){
         buttons = `<button class="btn btn-outline-info btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'completed')" data-bs-toggle="tooltip" title="ทำเสร็จแล้ว"><i class="fas fa-check-double"></i></button>
                    <button class="btn btn-outline-danger btn-action" onclick="updateOrderStatus(${row.data('order-id')}, 'cancelled')" data-bs-toggle="tooltip" title="ยกเลิกออเดอร์"><i class="fas fa-times"></i></button>` + buttons;
+    } 
+    // สำหรับ completed ให้แสดงปุ่มลบ
+    else if(status=='completed'){
+        buttons += `<button class="btn btn-outline-danger btn-action" onclick="confirmDeleteOrder(${row.data('order-id')})" data-bs-toggle="tooltip" title="ลบคำสั่งซื้อ"><i class="fas fa-trash"></i></button>`;
     }
+    
     row.find('td:last-child .action-buttons').html(buttons);
     row.find('[data-bs-toggle="tooltip"]').tooltip();
 }
