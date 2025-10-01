@@ -386,6 +386,7 @@ $(document).ready(function() {
             updateCartQuantity(cartKey, newQuantity);
         }
     });
+
     
     // Handle direct quantity input change
     $('.quantity-display').on('change', function() {
@@ -542,5 +543,46 @@ $(document).ready(function() {
     // Initialize tooltips
     $('[data-bs-toggle="tooltip"]').tooltip();
 });
+
+    $('#clear-cart-btn').on('click', function(e) {
+        e.preventDefault();
+        if (!confirm('คุณต้องการลบสินค้าทั้งหมดในตะกร้าหรือไม่?')) return;
+
+        $.ajax({
+            url: '/clear_cart',
+            type: 'POST',
+            contentType: 'application/json',
+            beforeSend: function() {
+                // ใส่ opacity ให้ทั้งหมด
+                $('.cart-item').addClass('opacity-75');
+                $('#clear-cart-btn').prop('disabled', true);
+            },
+            success: function(response) {
+                if (response.success) {
+                    // ลบสินค้าทั้งหมดแบบ animation
+                    $('.cart-item').fadeOut(300, function() {
+                        $(this).remove();
+                    });
+
+                    // อัปเดตตะกร้าเป็นว่าง
+                    updateCartTotals(0, 0);
+
+                    // แสดง toast
+                    showToast(response.message, 'success');
+
+                    // รีเฟรชหน้าเพื่อโชว์ empty cart
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+                }
+            },
+            error: function() {
+                showToast('เกิดข้อผิดพลาดในการเคลียร์ตะกร้า', 'error');
+            },
+            complete: function() {
+                $('#clear-cart-btn').prop('disabled', false);
+            }
+        });
+    });
 </script>
 {% endblock %}

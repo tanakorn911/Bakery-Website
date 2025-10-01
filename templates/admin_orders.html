@@ -15,6 +15,18 @@
         </h1>
         <p class="lead mb-0">ตรวจสอบและจัดการคำสั่งซื้อทั้งหมด</p>
     </div>
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>เคล็ดลับ:</strong> ตรวจสอบการชำระเงินที่รอยืนยันได้ที่นี่
+        </div>
+        <a href="{{ url_for('admin_payments') }}" class="btn btn-warning">
+            <i class="fas fa-money-check-alt me-2"></i>ตรวจสอบการชำระเงิน
+            {% if verifying_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ verifying_count }}</span>
+            {% endif %}
+        </a>
+    </div>
 
     <!-- Orders Statistics -->
     <div class="admin-stats my-4">

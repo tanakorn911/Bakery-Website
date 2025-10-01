@@ -98,8 +98,8 @@
     }
     
     .payment-status-card {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
+        background: #d3d3d3;
+        color: black;
         padding: 25px;
         border-radius: 15px;
         margin-bottom: 20px;
@@ -148,7 +148,7 @@
     }
     
     .btn-pay {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #8B4513;
         color: white;
         border: none;
         padding: 12px 30px;
@@ -214,14 +214,17 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block content %} 
+    <!-- Payment Status -->
+{% set pm = order.payment_method|default('cod')|lower|replace(' ', '') %}
+{% set ps = order.payment_status|default('pending')|lower() %}
+
 <div class="container order-container">
     <div class="order-header">
         <div class="order-number">
             <i class="fas fa-receipt"></i> คำสั่งซื้อ #{{ order.id }}
         </div>
         <p class="mb-0">สั่งเมื่อ: {{ order.created_at|to_bangkok('%d/%m/%Y %H:%M') }}</p>
-        
         <div class="order-status status-{{ order.status }}">
             {% if order.status == 'pending' %}
                 <i class="fas fa-clock"></i> รอดำเนินการ
@@ -234,64 +237,45 @@
             {% endif %}
         </div>
     </div>
-    
+
     <!-- Payment Status -->
-    {% if order.payment_method == 'promptpay' %}
-    <div class="payment-status-card {% if order.payment_status == 'paid' %}paid{% elif order.payment_status == 'verifying' %}verified{% endif %}">
+    {% if pm == 'promptpay' and order.status == 'pending' %}
+    <div class="payment-status-card 
+        {% if ps == 'paid' %}paid
+        {% elif ps == 'verifying' %}verified
+        {% endif %}">
+        
         <h4><i class="fas fa-credit-card"></i> สถานะการชำระเงิน</h4>
-        {% if order.payment_status == 'pending' %}
-            <p class="mb-0">
-                <i class="fas fa-exclamation-circle"></i> 
-                รอชำระเงิน - กรุณาชำระเงินผ่าน PromptPay
-            </p>
+        
+        {% if ps == 'pending' %}
+            <p class="mb-0"><i class="fas fa-exclamation-circle"></i> รอชำระเงิน - กรุณาชำระเงินผ่าน PromptPay</p>
             <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-light mt-3">
                 <i class="fas fa-qrcode"></i> ชำระเงินตอนนี้
             </a>
-        {% elif order.payment_status == 'verifying' %}
-            <p class="mb-0">
-                <i class="fas fa-sync fa-spin"></i> 
-                กำลังตรวจสอบการชำระเงิน - โปรดรอสักครู่
-            </p>
-        {% elif order.payment_status == 'paid' %}
-            <p class="mb-0">
-                <i class="fas fa-check-circle"></i> 
-                ชำระเงินเรียบร้อยแล้ว
-            </p>
-        {% elif order.payment_status == 'rejected' %}
-            <p class="mb-0">
-                <i class="fas fa-times-circle"></i> 
-                การชำระเงินถูกปฏิเสธ - กรุณาชำระใหม่อีกครั้ง
-            </p>
+        {% elif ps == 'verifying' %}
+            <p class="mb-0"><i class="fas fa-sync fa-spin"></i> กำลังตรวจสอบการชำระเงิน - โปรดรอสักครู่</p>
+        {% elif ps == 'paid' %}
+            <p class="mb-0"><i class="fas fa-check-circle"></i> ชำระเงินเรียบร้อยแล้ว</p>
+        {% elif ps == 'rejected' %}
+            <p class="mb-0"><i class="fas fa-times-circle"></i> การชำระเงินถูกปฏิเสธ - กรุณาชำระใหม่อีกครั้ง</p>
             <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-light mt-3">
                 <i class="fas fa-redo"></i> ชำระเงินอีกครั้ง
             </a>
         {% endif %}
     </div>
     {% endif %}
-    
+
+
     <!-- Customer Information -->
     <div class="order-card">
-        <h4 class="section-title">
-            <i class="fas fa-user"></i> ข้อมูลผู้สั่ง
-        </h4>
+        <h4 class="section-title"><i class="fas fa-user"></i> ข้อมูลผู้สั่ง</h4>
         <div class="info-grid">
-            <div class="info-item">
-                <div class="info-label">ชื่อ-นามสกุล</div>
-                <div class="info-value">{{ order.customer_name }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">เบอร์โทรศัพท์</div>
-                <div class="info-value">{{ order.customer_phone }}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">ที่อยู่จัดส่ง</div>
-                <div class="info-value">{{ addr.full_address if addr else 'ไม่ระบุ' }}</div>
-            </div>
-            {% set pm = order.payment_method|default('cod')|lower|replace(' ', '') %}
-            <div class="info-item">
-                <div class="info-label">วิธีชำระเงิน</div>
+            <div class="info-item"><div class="info-label">ชื่อ-นามสกุล</div><div class="info-value">{{ order.customer_name }}</div></div>
+            <div class="info-item"><div class="info-label">เบอร์โทรศัพท์</div><div class="info-value">{{ order.customer_phone }}</div></div>
+            <div class="info-item"><div class="info-label">ที่อยู่จัดส่ง</div><div class="info-value">{{ addr.full_address if addr else 'ไม่ระบุ' }}</div></div>
+            <div class="info-item"><div class="info-label">วิธีชำระเงิน</div>
                 <div class="info-value">
-                    {% if pm == 'promptpay' %}
+                    {% if payment.payment_method == 'promptpay' %}
                         <i class="fas fa-qrcode"></i> PromptPay
                     {% else %}
                         <i class="fas fa-money-bill-wave"></i> เก็บเงินปลายทาง
@@ -299,171 +283,114 @@
                 </div>
             </div>
         </div>
-        
         {% if order.notes %}
-        <div class="info-item">
-            <div class="info-label">หมายเหตุ</div>
-            <div class="info-value">{{ order.notes }}</div>
-        </div>
+        <div class="info-item"><div class="info-label">หมายเหตุ</div><div class="info-value">{{ order.notes }}</div></div>
         {% endif %}
     </div>
 
-    
     <!-- Order Items -->
     <div class="order-card">
-        <h4 class="section-title">
-            <i class="fas fa-shopping-bag"></i> รายการสินค้า
-        </h4>
+        <h4 class="section-title"><i class="fas fa-shopping-bag"></i> รายการสินค้า</h4>
         <table class="items-table">
             <thead>
-                <tr>
-                    <th>สินค้า</th>
-                    <th style="text-align: center;">จำนวน</th>
-                    <th style="text-align: right;">ราคา/หน่วย</th>
-                    <th style="text-align: right;">รวม</th>
-                </tr>
+                <tr><th>สินค้า</th><th style="text-align:center;">จำนวน</th><th style="text-align:right;">ราคา/หน่วย</th><th style="text-align:right;">รวม</th></tr>
             </thead>
             <tbody>
                 {% for item in items %}
                 <tr>
-                    <td>
-                        <strong>{{ item.product_name }}</strong>
-                        {% if item.options %}
-                        <br><small class="text-muted">{{ item.options }}</small>
-                        {% endif %}
-                    </td>
-                    <td style="text-align: center;">{{ item.quantity }}</td>
-                    <td style="text-align: right;">฿{{ "{:,.0f}".format(item.unit_price) }}</td>
-                    <td style="text-align: right;">฿{{ "{:,.0f}".format(item.total_price) }}</td>
+                    <td><strong>{{ item.product_name }}</strong>{% if item.options %}<br><small class="text-muted">{{ item.options }}</small>{% endif %}</td>
+                    <td style="text-align:center;">{{ item.quantity }}</td>
+                    <td style="text-align:right;">฿{{ "{:,.0f}".format(item.unit_price) }}</td>
+                    <td style="text-align:right;">฿{{ "{:,.0f}".format(item.total_price) }}</td>
                 </tr>
                 {% endfor %}
-                <tr class="total-row">
-                    <td colspan="3" style="text-align: right;">ยอดรวมทั้งหมด</td>
-                    <td style="text-align: right;">฿{{ "{:,.0f}".format(order.total_amount) }}</td>
-                </tr>
+                <tr class="total-row"><td colspan="3" style="text-align:right;">ยอดรวมทั้งหมด</td><td style="text-align:right;">฿{{ "{:,.0f}".format(order.total_amount) }}</td></tr>
             </tbody>
         </table>
     </div>
-    
+
     <!-- Order Timeline -->
     <div class="order-card">
-        <h4 class="section-title">
-            <i class="fas fa-history"></i> ประวัติคำสั่งซื้อ
-        </h4>
+        <h4 class="section-title"><i class="fas fa-history"></i> ประวัติคำสั่งซื้อ</h4>
         <div class="timeline">
-
-            <!-- สั่งซื้อสำเร็จ -->
             <div class="timeline-item active">
-                <div class="timeline-content">
-                    <strong>สั่งซื้อสำเร็จ</strong>
-                    <div class="timeline-time">
-                        {{ order.created_at|to_bangkok('%d/%m/%Y %H:%M') }}
-                    </div>
-                </div>
+                <div class="timeline-content"><strong>สั่งซื้อสำเร็จ</strong>
+                <div class="timeline-time">{{ order.created_at|to_bangkok('%d/%m/%Y %H:%M') }}</div></div>
             </div>
 
-            <!-- รอชำระเงิน / กำลังตรวจสอบ PromptPay -->
-            {% if order.payment_method|default('cod')|lower|replace(' ', '') == 'promptpay' %}
-            <div class="timeline-item {% if order.payment_status in ['verifying', 'paid'] %}active{% endif %}">
+            {% if pm == 'promptpay' %}
+            <div class="timeline-item {% if ps in ['verifying','paid'] %}active{% endif %}">
                 <div class="timeline-content">
                     <strong>
-                        {% if order.payment_status == 'pending' %}
-                            รอชำระเงิน
-                        {% elif order.payment_status == 'verifying' %}
-                            กำลังตรวจสอบการชำระเงิน
-                        {% elif order.payment_status == 'paid' %}
-                            ชำระเงินแล้ว
-                        {% elif order.payment_status == 'rejected' %}
-                            การชำระเงินถูกปฏิเสธ
+                        {% if ps == 'pending' %}รอชำระเงิน
+                        {% elif ps == 'verifying' %}กำลังตรวจสอบการชำระเงิน
+                        {% elif ps == 'paid' %}ชำระเงินแล้ว
+                        {% elif ps == 'rejected' %}การชำระเงินถูกปฏิเสธ
                         {% endif %}
                     </strong>
                     <div class="timeline-time">
                         {% if order.paid_at %}
                             {{ order.paid_at|to_bangkok('%d/%m/%Y %H:%M') }}
                         {% else %}
-                            {% if order.payment_status == 'pending' %}
-                                รอการชำระเงิน
-                            {% else %}
-                                -
-                            {% endif %}
+                            {% if ps == 'pending' %}รอการชำระเงิน{% else %}-{% endif %}
                         {% endif %}
                     </div>
                 </div>
             </div>
             {% endif %}
 
-            <!-- กำลังจัดเตรียม / จัดส่ง -->
-            {% if order.status in ['processing', 'completed'] %}
-            <div class="timeline-item {% if order.status in ['processing', 'completed'] %}active{% endif %}">
+            {% if order.status in ['processing','completed'] %}
+            <div class="timeline-item {% if order.status in ['processing','completed'] %}active{% endif %}">
                 <div class="timeline-content">
                     <strong>กำลังจัดเตรียม / กำลังจัดส่ง</strong>
                     <div class="timeline-time">
                         {% if order.status == 'completed' and order.delivered_at %}
                             {{ order.delivered_at|to_bangkok('%d/%m/%Y %H:%M') }}
-                        {% else %}
-                            กำลังดำเนินการ
-                        {% endif %}
+                        {% else %}กำลังดำเนินการ{% endif %}
                     </div>
                 </div>
             </div>
             {% endif %}
 
-            <!-- จัดส่งสำเร็จ -->
             {% if order.status == 'completed' %}
             <div class="timeline-item active">
-                <div class="timeline-content">
-                    <strong>จัดส่งสำเร็จ</strong>
-                    <div class="timeline-time">
-                        {{ order.delivered_at|to_bangkok('%d/%m/%Y %H:%M') if order.delivered_at else 'เสร็จสิ้น' }}
-                    </div>
-                </div>
+                <div class="timeline-content"><strong>จัดส่งสำเร็จ</strong>
+                <div class="timeline-time">{{ order.delivered_at|to_bangkok('%d/%m/%Y %H:%M') if order.delivered_at else 'เสร็จสิ้น' }}</div></div>
             </div>
             {% endif %}
 
-            <!-- ยกเลิกคำสั่งซื้อ -->
             {% if order.status == 'cancelled' %}
-                <div class="timeline-item active">
-                    <div class="timeline-content" style="background:#f8d7da; color:#721c24;">
-                        <strong>ยกเลิกคำสั่งซื้อ</strong>
-                        <div class="timeline-time">
-                            {% if order.cancelled_at %}
-                                {{ order.cancelled_at|to_bangkok('%d/%m/%Y %H:%M') }}
-                            {% else %}
-                                ไม่ระบุเวลา
-                            {% endif %}
-                        </div>
-                    </div>
+            <div class="timeline-item active">
+                <div class="timeline-content" style="background:#f8d7da;color:#721c24;">
+                    <strong>ยกเลิกคำสั่งซื้อ</strong>
+                    <div class="timeline-time">{{ order.cancelled_at|to_bangkok('%d/%m/%Y %H:%M') if order.cancelled_at else 'ไม่ระบุเวลา' }}</div>
                 </div>
-                {% endif %}
-
+            </div>
+            {% endif %}
         </div>
     </div>
-    
+
     <!-- Action Buttons -->
     <div class="order-card">
-        <div class="action-buttons">
-            <a href="{{ url_for('order_history') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> กลับไปประวัติคำสั่งซื้อ
-            </a>
-            
-            {% if order.payment_method == 'promptpay' and order.payment_status == 'pending' %}
-            <a href="{{ url_for('payment_page', order_id=order.id) }}" class="btn btn-pay">
-                <i class="fas fa-qrcode"></i> ชำระเงินตอนนี้
-            </a>
-            {% endif %}
-            
-            {% if order.status == 'pending' %}
-            <button class="btn btn-danger" onclick="cancelOrder({{ order.id }})">
-                <i class="fas fa-times"></i> ยกเลิกคำสั่งซื้อ
-            </button>
-            {% endif %}
-            
-            {% if order.status == 'completed' %}
-            <button class="btn btn-primary" onclick="reorder({{ order.id }})">
-                <i class="fas fa-redo"></i> สั่งซื้ออีกครั้ง
-            </button>
-            {% endif %}
-        </div>
+    <div class="d-flex justify-content-center flex-wrap gap-3 mt-4">
+        <!-- ปุ่มกลับไปประวัติคำสั่งซื้อ -->
+        <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='{{ url_for('order_history') }}'">
+            <i class="fas fa-arrow-left"></i> กลับไปประวัติคำสั่งซื้อ
+        </button>
+
+        <!-- ปุ่มยกเลิกคำสั่งซื้อ -->
+        {% if order.status == 'pending' %}
+        <button class="btn btn-danger" onclick="cancelOrder({{ order.id }})">
+            <i class="fas fa-times"></i> ยกเลิกคำสั่งซื้อ
+        </button>
+        {% endif %}
+
+        <!-- ปุ่มสั่งซื้ออีกครั้ง -->
+        {% if order.status in ['completed', 'cancelled'] %}
+        <button class="btn btn-primary" onclick="reorder({{ order.id }})">
+            <i class="fas fa-redo"></i> สั่งซื้ออีกครั้ง
+        </button>
+        {% endif %}
     </div>
 </div>
 

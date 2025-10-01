@@ -11,8 +11,8 @@
     }
     
     .page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: papayawhip;
+        color: black;
         padding: 30px;
         border-radius: 15px;
         margin-bottom: 30px;
@@ -30,7 +30,7 @@
         padding: 25px;
         border-radius: 12px;
         box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        border-left: 4px solid #667eea;
+        border-left: 4px solid #8B4513;
     }
     
     .stat-icon {
@@ -73,7 +73,7 @@
     }
     
     .order-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #8B4513;
         color: white;
         padding: 8px 20px;
         border-radius: 20px;
@@ -90,7 +90,7 @@
     
     .status-pending {
         background: #fff3cd;
-        color: #856404;
+        color: #8B4513;
     }
     
     .status-verifying {
@@ -204,14 +204,14 @@
     }
     
     .filter-tab:hover {
-        border-color: #667eea;
-        color: #667eea;
+        border-color: #8B4513;
+        color: #8B4513;
     }
     
     .filter-tab.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #8B4513;
         color: white;
-        border-color: #667eea;
+        border-color: #8B4513;
     }
     
     .empty-state {
@@ -343,7 +343,7 @@
                     
                     <div class="detail-item">
                         <div class="detail-label">ยอดชำระ</div>
-                        <div class="detail-value" style="color: #667eea; font-size: 1.3rem;">
+                        <div class="detail-value" style="color: #8B4513; font-size: 1.3rem;">
                             <i class="fas fa-dollar-sign"></i> ฿{{ "{:,.0f}".format(payment.amount) }}
                         </div>
                     </div>
@@ -365,15 +365,22 @@
                     {% endif %}
                 </div>
                 
-                {% if payment.payment_method == 'promptpay' and payment.status == 'verifying' %}
+                {% if payment.payment_method == 'promptpay' and payment.status in ['verifying', 'pending'] %}
                 <div class="slip-preview">
                     <h5><i class="fas fa-image"></i> หลักฐานการโอนเงิน</h5>
-                    <img src="https://via.placeholder.com/400x500/667eea/ffffff?text=Slip+Image" 
+                    {% if payment.slip_image %}
+                    <img src="{{ url_for('static', filename='uploads/slips/' + payment.slip_image) }}"
                          class="slip-image" 
                          alt="Payment Slip"
                          data-bs-toggle="modal" 
-                         data-bs-target="#slipModal{{ payment.order_id }}">
+                         data-bs-target="#slipModal{{ payment.order_id }}"
+                         onerror="this.src='https://via.placeholder.com/400x500/dc3545/ffffff?text=Error+Loading+Image'">
                     <p class="text-muted mt-2">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> ลูกค้ายังไม่ได้อัพโหลดสลิป
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <div class="action-buttons">
@@ -386,9 +393,9 @@
                 </div>
                 {% endif %}
                 
-                <div class="mt-3">
+                <div class="d-flex justify-content-start mt-3">
                     <a href="{{ url_for('order_detail', order_id=payment.order_id) }}" 
-                       class="btn btn-sm btn-outline-primary">
+                       class="btn btn-detail-view btn-sm custom-btn">
                         <i class="fas fa-eye"></i> ดูรายละเอียดคำสั่งซื้อ
                     </a>
                 </div>
@@ -403,9 +410,28 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body text-center">
-                            <img src="https://via.placeholder.com/600x800/667eea/ffffff?text=Full+Slip+Image" 
+                            {% if payment.slip_image %}
+                            <img src="{{ url_for('static', filename='uploads/slips/' + payment.slip_image) }}"
                                  class="modal-image" 
-                                 alt="Payment Slip">
+                                 alt="Payment Slip"
+                                 onerror="this.src='https://via.placeholder.com/600x800/dc3545/ffffff?text=Error+Loading+Image'">
+                            <div class="mt-3">
+                                <p><strong>ยอดชำระ:</strong> ฿{{ "{:,.0f}".format(payment.amount) }}</p>
+                                <p><strong>วันที่โอน:</strong> {{ payment.paid_at|to_bangkok('%d/%m/%Y %H:%M') if payment.paid_at else 'N/A' }}</p>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> ไม่มีรูปสลิป
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                            {% if payment.slip_image %}
+                            <a href="{{ payment.slip_image }}" download="slip_order_{{ payment.order_id }}.png" class="btn btn-primary">
+                                <i class="fas fa-download"></i> ดาวน์โหลด
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

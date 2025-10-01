@@ -148,7 +148,7 @@
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('profile') }}">
-                                        <i class="fas fa-user me-2"></i>โปรไฟล์
+                                        <i class="fas fa-user me-2"></i> โปรไฟล์
                                     </a>
                                 </li>
                                 <li>
@@ -158,31 +158,36 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('order_history') }}">
-                                        <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อ
+                                        <i class="fas fa-history me-2"></i> ประวัติการสั่งซื้อ
                                     </a>
                                 </li>
                                 {% if session.get('role') == 'admin' %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-primary" href="{{ url_for('admin') }}">
-                                        <i class="fas fa-cog me-2"></i>จัดการสินค้า
+                                        <i class="fas fa-cog me-2"></i> จัดการสินค้า
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item text-primary" href="{{ url_for('admin_orders') }}">
-                                        <i class="fas fa-shopping-cart me-2"></i>จัดการคำสั่งซื้อ
+                                        <i class="fas fa-shopping-cart me-2"></i> จัดการคำสั่งซื้อ
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-primary" href="{{ url_for('admin_payments') }}">
+                                        <i class="fas fa-money-check-alt me-2"></i> ตรวจสอบการชำระเงิน
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item text-primary" href="{{ url_for('admin_order_history') }}">
-                                        <i class="fas fa-history me-2"></i>ประวัติการสั่งซื้อทั้งหมด
+                                        <i class="fas fa-history me-2"></i> ประวัติการสั่งซื้อทั้งหมด
                                     </a>
                                 </li>
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                        <i class="fas fa-sign-out-alt me-2"></i>ออกจากระบบ
+                                        <i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ
                                     </a>
                                 </li>
                             </ul>
@@ -190,12 +195,12 @@
                     {% else %}
                         <li class="nav-item me-2">
                             <a class="btn btn-outline-primary btn-sm" href="{{ url_for('login') }}">
-                                <i class="fas fa-sign-in-alt me-1"></i>เข้าสู่ระบบ
+                                <i class="fas fa-sign-in-alt me-1"></i> เข้าสู่ระบบ
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">
-                                <i class="fas fa-user-plus me-1"></i>สมัครสมาชิก
+                                <i class="fas fa-user-plus me-1"></i> สมัครสมาชิก
                             </a>
                         </li>
                     {% endif %}

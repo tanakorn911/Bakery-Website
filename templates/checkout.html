@@ -316,33 +316,41 @@
         if (this.value === 'pickup') {
             addressSection.style.display = 'none';
             pickupInfo.style.display = 'block';
-            addressSection.querySelector('select').required = false;
+            addressSection.querySelector('select')?.removeAttribute('required');
         } else {
             addressSection.style.display = 'block';
             pickupInfo.style.display = 'none';
-            addressSection.querySelector('select').required = true;
+            addressSection.querySelector('select')?.setAttribute('required', 'true');
         }
     });
 
-    // จัดการ payment method selection
+    // ฟังก์ชันเลือก payment method
     function selectPayment(method) {
-        // Remove active class from all
         document.querySelectorAll('.payment-method-card').forEach(card => {
             card.classList.remove('active');
-            card.querySelector('.fa-check-circle').style.display = 'none';
+            const checkIcon = card.querySelector('.fa-check-circle');
+            if(checkIcon) checkIcon.style.display = 'none';
         });
 
-        // Add active class to selected
-        const selectedCard = document.getElementById('payment-' + method).closest('.payment-method-card');
-        selectedCard.classList.add('active');
-        selectedCard.querySelector('.fa-check-circle').style.display = 'block';
-
-        // Check the radio button
-        document.getElementById('payment-' + method).checked = true;
+        const selectedCard = document.getElementById('payment-' + method)?.closest('.payment-method-card');
+        if(selectedCard){
+            selectedCard.classList.add('active');
+            const checkIcon = selectedCard.querySelector('.fa-check-circle');
+            if(checkIcon) checkIcon.style.display = 'block';
+            document.getElementById('payment-' + method).checked = true;
+        }
     }
 
-    // Initialize with COD selected
-    selectPayment('cod');
+    // ใช้ค่า default payment method จาก server (เช่นจาก route)
+    const defaultMethod = "{{ default_payment_method|default('cod') }}";
+    selectPayment(defaultMethod);
+
+    // เมื่อ user เลือก payment method
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            selectPayment(this.value);
+        });
+    });
 
     // Form validation
     document.getElementById('checkout-form').addEventListener('submit', function(e) {
@@ -354,7 +362,6 @@
             return false;
         }
 
-        // ถ้าเลือก delivery แต่ไม่มีที่อยู่
         if (deliverySelect.value === 'delivery') {
             const addressSelect = document.querySelector('select[name="customer_address"]');
             if (!addressSelect || !addressSelect.value) {
@@ -364,25 +371,5 @@
             }
         }
     });
-
-    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            // ล้าง active ของทุกการ์ด
-            document.querySelectorAll('.payment-method-card').forEach(card => {
-                card.classList.remove('active');
-                card.querySelector('.fa-check-circle').style.display = 'none';
-            });
-
-            // ใส่ active ให้การ์ดที่เลือก
-            const selectedCard = this.closest('.payment-method-card');
-            selectedCard.classList.add('active');
-            selectedCard.querySelector('.fa-check-circle').style.display = 'block';
-        });
-    });
-
-    // กำหนดค่าเริ่มต้นเป็น COD
-    const defaultRadio = document.getElementById('payment-cod');
-    defaultRadio.checked = true;
-    defaultRadio.dispatchEvent(new Event('change'));
 </script>
 {% endblock %}

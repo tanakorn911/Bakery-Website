@@ -9,6 +9,7 @@ import qrcode
 from io import BytesIO
 import base64
 from zoneinfo import ZoneInfo
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "sweetdreams_bakery_secret_2024"
@@ -88,6 +89,7 @@ def init_db():
         customer_phone TEXT NOT NULL,
         customer_address TEXT,
         cancelled_at DATETIME,
+        payment_method TEXT DEFAULT 'cod',
         notes TEXT,
         delivery_method TEXT DEFAULT 'delivery',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -116,6 +118,7 @@ def init_db():
     payment_method TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     status TEXT DEFAULT 'unpaid',
+    slip_image TEXT,
     paid_at TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
     )
@@ -252,6 +255,46 @@ def create_default_images_folder():
         os.makedirs(images_path, exist_ok=True)
         print(f"Created images folder: {images_path}")
 
+UPLOAD_FOLDER = 'static/uploads/slips'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload_slip/<int:order_id>', methods=['POST'])
+@login_required
+def upload_slip(order_id):
+    if 'slip' not in request.files:
+        return jsonify({'success': False, 'message': 'ไม่มีไฟล์ถูกส่งมา'}), 400
+
+    file = request.files['slip']
+
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'ยังไม่ได้เลือกไฟล์'}), 400
+
+    if file and allowed_file(file.filename):
+        # ตั้งชื่อไฟล์เอง: slip_ORDERID_TIMESTAMP.EXT
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = f"slip_{order_id}_{timestamp}.{ext}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+
+        # สร้างโฟลเดอร์ถ้ายังไม่มี
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+        # บันทึกไฟล์
+        file.save(filepath)
+
+        # อัปเดต DB
+        conn = get_db_connection()
+        conn.execute("UPDATE payments SET slip_image=? , status='verifying' WHERE order_id=?",
+                     (filename, order_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'อัปโหลดสลิปเรียบร้อย', 'filename': filename})
+    else:
+        return jsonify({'success': False, 'message': 'ไฟล์ต้องเป็น PNG, JPG, JPEG'}), 400
 # ========================
 # Helper Functions
 # ========================
@@ -333,6 +376,36 @@ def get_cart_total():
     total_price = sum(item['quantity'] * item['price'] for item in cart.values())
     return total_items, total_price
 
+def get_all_payments():
+    conn = sqlite3.connect("bakery.db")
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT 
+            p.id AS payment_id,
+            p.order_id,
+            p.payment_method,
+            p.amount,
+            p.status AS payment_status,
+            p.paid_at,
+            o.customer_name,
+            o.customer_phone,
+            o.customer_address,
+            o.delivery_method,
+            o.total_amount,
+            o.status AS order_status,
+            o.created_at AS order_created
+        FROM payments p
+        JOIN orders o ON p.order_id = o.id
+        ORDER BY p.paid_at DESC
+    """)
+    
+    rows = cur.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
 # ========================
 # Context Processor
 # ========================
@@ -341,9 +414,19 @@ def get_cart_total():
 def inject_global_data():
     categories = get_categories()
     cart_total_items, _ = get_cart_total()
+
+    verifying_count = 0
+    if session.get('role') == 'admin':
+        conn = get_db_connection()
+        verifying_count = conn.execute("""
+            SELECT COUNT(*) FROM payments WHERE status = 'verifying'
+        """).fetchone()[0]
+        conn.close()
+
     return dict(
         categories=categories,
-        cart_total_items=cart_total_items
+        cart_total_items=cart_total_items,
+        verifying_count=verifying_count
     )
 
 # ========================
@@ -623,6 +706,7 @@ def checkout():
     conn = get_db_connection()
     addresses = conn.execute("""
         SELECT id,
+               recipient_name || ', ' ||
                address || 
                CASE WHEN city IS NOT NULL THEN ', ' || city ELSE '' END ||
                CASE WHEN postal_code IS NOT NULL THEN ', ' || postal_code ELSE '' END ||
@@ -667,9 +751,9 @@ def checkout():
         try:
             cursor = conn.execute("""
                 INSERT INTO orders 
-                (user_id, total_amount, customer_name, customer_phone, customer_address, notes, status, delivery_method)
-                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
-            """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes, delivery_method))
+                (user_id, total_amount, customer_name, customer_phone, customer_address, notes, status, delivery_method, payment_method)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            """, (session['user_id'], total_price, customer_name, customer_phone, customer_address, notes, delivery_method, payment_method))
             order_id = cursor.lastrowid
 
             # เพิ่ม order_items และลด stock
@@ -718,7 +802,6 @@ def checkout():
                            total_price=total_price,
                            addresses=addresses)
 
-
 @app.route('/payment/<int:order_id>')
 @login_required
 def payment_page(order_id):
@@ -749,7 +832,7 @@ def payment_page(order_id):
     conn.close()
     
     # สร้าง QR Code PromptPay
-    promptpay_id = "0809317630"  # เปลี่ยนเป็นเบอร์ PromptPay จริงของร้าน
+    promptpay_id = "0891234567"  # เปลี่ยนเป็นเบอร์ PromptPay จริงของร้าน
     amount = float(order['total_amount'])
     
     qr_data = generate_promptpay_qr(promptpay_id, amount)
@@ -766,11 +849,13 @@ def payment_page(order_id):
 def confirm_payment(order_id):
     """ยืนยันการชำระเงิน (สำหรับลูกค้า)"""
     data = request.get_json()
-    slip_image = data.get('slip_image')  # Base64 image
+    slip_base64 = data.get('slip_image')
     
+    if not slip_base64:
+        return jsonify({'success': False, 'message': 'กรุณาอัพโหลดสลิปการโอนเงิน'})
+
     conn = get_db_connection()
     
-    # ตรวจสอบคำสั่งซื้อ
     order = conn.execute("""
         SELECT * FROM orders WHERE id = ? AND user_id = ?
     """, (order_id, session['user_id'])).fetchone()
@@ -778,19 +863,38 @@ def confirm_payment(order_id):
     if not order:
         conn.close()
         return jsonify({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
-    
+
     try:
-        # อัพเดทสถานะการชำระเงิน
+        # แยก Base64 header
+        if ',' in slip_base64:
+            header, slip_base64 = slip_base64.split(',', 1)
+        
+        file_data = base64.b64decode(slip_base64)
+        
+        # ตั้งชื่อไฟล์อัตโนมัติ
+        ext = 'png'  # default
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = f"slip_{order_id}_{timestamp}.{ext}"
+        
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        filepath = os.path.join(UPLOAD_FOLDER, secure_filename(filename))
+        
+        with open(filepath, 'wb') as f:
+            f.write(file_data)
+        
+        # อัพเดท DB เก็บชื่อไฟล์
         conn.execute("""
             UPDATE payments 
-            SET status = 'verifying', paid_at = CURRENT_TIMESTAMP
+            SET status = 'verifying', 
+                paid_at = CURRENT_TIMESTAMP,
+                slip_image = ?
             WHERE order_id = ?
-        """, (order_id,))
+        """, (filename, order_id))
         
         # อัพเดทสถานะคำสั่งซื้อ
         conn.execute("""
             UPDATE orders 
-            SET status = 'pending'
+            SET status = 'processing'
             WHERE id = ?
         """, (order_id,))
         
@@ -806,6 +910,18 @@ def confirm_payment(order_id):
         conn.close()
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/check_payment_method/<int:order_id>')
+@login_required
+def check_payment_method(order_id):
+    """เช็คค่า payment_method ของ order ใน DB"""
+    conn = get_db_connection()
+    order = conn.execute("SELECT id, payment_method FROM orders WHERE id = ?", (order_id,)).fetchone()
+    conn.close()
+    
+    if not order:
+        return f"Order {order_id} not found", 404
+    
+    return f"Order ID: {order['id']} - payment_method: {order['payment_method']}"
 
 @app.route('/admin/verify_payment/<int:order_id>', methods=['POST'])
 def admin_verify_payment(order_id):
@@ -851,14 +967,13 @@ def admin_verify_payment(order_id):
             message = 'ปฏิเสธการชำระเงิน'
         
         conn.commit()
-        conn.close()
         
         return jsonify({'success': True, 'message': message})
     except Exception as e:
         conn.rollback()
-        conn.close()
         return jsonify({'success': False, 'message': str(e)})
-
+    finally:
+        conn.close()
 
 def generate_promptpay_qr(promptpay_id, amount):
     """สร้าง QR Code สำหรับ PromptPay"""
@@ -870,7 +985,7 @@ def generate_promptpay_qr(promptpay_id, amount):
     
     # เพิ่มหมายเลข PromptPay (เบอร์โทร 10 หลัก)
     if len(promptpay_id) == 10:
-        promptpay_id = "+66809317630" + promptpay_id[1:]  # เปลี่ยน 0 เป็น +66
+        promptpay_id = "0066" + promptpay_id[1:]  # เปลี่ยน 0 เป็น +66
     
     payload += f"01{len(promptpay_id):02d}{promptpay_id}"
     
@@ -1067,15 +1182,17 @@ def order_detail(order_id):
         JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id=?
     """, (order_id,)).fetchall()
-
-    # แปลง Row เป็น dict
     items = [dict(i) for i in items]
 
+    # ✅ ดึงข้อมูล payment
+    payment = conn.execute("SELECT * FROM payments WHERE order_id=?", (order_id,)).fetchone()
+    if payment:
+        payment = dict(payment)
+
     conn.close()
-    return render_template("order_detail.html", order=order, addr=addr, items=items)
+    return render_template("order_detail.html", order=order, addr=addr, items=items, payment=payment)
 
 
-from datetime import datetime
 
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
 @login_required
@@ -1262,8 +1379,14 @@ def admin_orders():
 
         orders.append(order)
 
+        verifying_count = conn.execute("""
+        SELECT COUNT(*) FROM payments WHERE status = 'verifying'
+        """).fetchone()[0]
+        
     conn.close()
-    return render_template('admin_orders.html', orders=orders)
+    return render_template('admin_orders.html', 
+                           orders=orders,
+                           verifying_count=verifying_count)
 
 
 @app.route("/admin/print_order/<int:order_id>")
@@ -1540,6 +1663,42 @@ def admin_order_history():
     conn.close()
 
     return render_template("admin_order_history.html", orders=orders)
+
+@app.route('/admin/payments')
+def admin_payments():
+    # ตรวจสอบสิทธิ์ admin
+    if session.get('role') != 'admin':
+        return "ไม่มีสิทธิ์เข้าถึง", 403
+
+    # ดึงข้อมูล payments จาก database
+    payments = get_all_payments()  # สมมติฟังก์ชันนี้คืน list ของ dict
+
+    # กำหนดค่า default สำหรับ key ที่อาจหายไป
+    for p in payments:
+        p.setdefault('status', 'pending')      # ถ้าไม่มี status -> pending
+        p.setdefault('amount', 0)             # ถ้าไม่มี amount -> 0
+        p.setdefault('payment_method', 'cod') # ถ้าไม่มี payment_method -> เก็บเงินปลายทาง
+        p.setdefault('customer_name', 'ไม่ระบุ')
+        p.setdefault('customer_phone', '-')
+        p.setdefault('created_at', datetime.now())
+        p.setdefault('paid_at', None)
+        p.setdefault('slip_image', None)
+
+    # นับสถิติ
+    pending_count = sum(1 for p in payments if p.get('status') == 'pending')
+    verifying_count = sum(1 for p in payments if p.get('status') == 'verifying')
+    paid_count = sum(1 for p in payments if p.get('status') == 'paid')
+    total_amount = sum(p.get('amount', 0) for p in payments)
+
+    # ส่งข้อมูลไปยัง template
+    return render_template(
+        'admin_payments.html',
+        payments=payments,
+        pending_count=pending_count,
+        verifying_count=verifying_count,
+        paid_count=paid_count,
+        total_amount=total_amount
+    )
 
 # ========================
 # Admin API Routes
