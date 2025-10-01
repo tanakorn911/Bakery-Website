@@ -456,14 +456,12 @@ $(document).ready(function() {
     });
 
     // ====== Cart Badge ======
-    function updateCartBadge() {
-        let cart = JSON.parse(localStorage.getItem('cart')) || [];
-        let totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
-        let badge = $('#cart-badge');
-        if (totalQty > 0) {
-            badge.text(totalQty).show();
+    function updateCartBadge(totalItems = 0) {
+        const badge = $('#cart-badge');
+        if (totalItems > 0) {
+            badge.text(totalItems).removeClass('d-none');
         } else {
-            badge.hide();
+            badge.addClass('d-none');
         }
     }
 

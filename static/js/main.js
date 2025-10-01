@@ -142,7 +142,8 @@ const StorageHelper = {
 /**
  * Show toast notification
  */
-function showToast(message, type = 'info') {
+function showToast(message, type = '') {
+    console.log("1")
     const toast = $('#toast');
     const toastBody = toast.find('.toast-body');
     
@@ -317,8 +318,8 @@ function handleAddToCart(e) {
     
     const button = $(this);
     const productId = button.data('product-id');
-    const productName = button.data('product-name');
-    const productPrice = button.data('product-price');
+    // const productName = button.data('product-name');
+    // const productPrice = button.data('product-price');
     const quantity = parseInt($(`#quantity-${productId}`).val()) || 1;
     
     // Check for product options (if applicable)
@@ -719,7 +720,7 @@ function setupEventListeners() {
     // Cart Management
     $(document).on('click', '.add-to-cart', handleAddToCart);
     $(document).on('click', '.quantity-btn', handleQuantityUpdate);
-    $(document).on('click', '.remove-from-cart', handleRemoveFromCart);
+    // $(document).on('click', '.remove-from-cart', handleRemoveFromCart); แก้ตรงนี้
     $('#clear-cart-btn').on('click', handleClearCart);
     
     // Product Interaction
@@ -769,9 +770,9 @@ function initializeApp() {
     $('[data-bs-toggle="tooltip"]').tooltip();
     
     // Auto-hide flash messages
-    setTimeout(function() {
-        $('.alert').fadeOut();
-    }, CONFIG.ALERT_FADE_DELAY);
+    // setTimeout(function() {
+    //     $('.alert').fadeOut();
+    // }, CONFIG.ALERT_FADE_DELAY);
     
     console.log('✅ Sweet Dreams Bakery - Application Ready');
 }

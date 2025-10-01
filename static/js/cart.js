@@ -4,12 +4,29 @@
  */
 
 // Global cart variables
+
+
 let cartData = {
     items: {},
     total: 0,
     count: 0,
     isUpdating: false
 };
+
+
+    // Toast function
+function showToast(message, type = 'info') {
+    console.log("2")
+    const toast = $('#toast');
+    toast.removeClass('bg-success bg-danger bg-warning bg-info');
+    if (type === 'success') toast.addClass('bg-success');
+    else if (type === 'error') toast.addClass('bg-danger');
+    else if (type === 'warning') toast.addClass('bg-warning');
+    else toast.addClass('bg-info');
+    toast.find('.toast-body').text(message);
+    toast.toast({ delay: 2500 });
+    toast.toast('show');
+}
 
 // DOM ready
 $(document).ready(function() {
@@ -21,12 +38,13 @@ $(document).ready(function() {
  */
 function initializeCart() {
     setupCartEventListeners();
-    loadCartFromSession();
-    updateCartDisplay();
-    setupCartAnimations();
+    // loadCartFromSession();
+    // updateCartDisplay();
+    // setupCartAnimations();
     
     console.log('🛒 Cart System Initialized');
 }
+
 
 /**
  * Setup cart event listeners
@@ -38,7 +56,7 @@ function setupCartEventListeners() {
     $(document).on('change', '.quantity-display', handleQuantityChange);
     
     // Remove item buttons
-    $(document).on('click', '.remove-from-cart', handleRemoveItem);
+    // $(document).on('click', '.remove-from-cart', handleRemoveItem);
     
     // Add to cart buttons
     $(document).on('click', '.add-to-cart', function(e) {
@@ -57,9 +75,11 @@ function setupCartEventListeners() {
             success: function(response) {
                 if (response.success) {
                     $('#cart-badge').text(response.total_items).show();
-                    showToast(response.message);
+                    // showToast(response.message); ลบทิ้ง
+                    console.log("suc")
                 } else {
                     showToast(response.message || 'เกิดข้อผิดพลาด', true);
+                    console.log("fail")
                 }
             }
         });
@@ -75,10 +95,10 @@ function setupCartEventListeners() {
     $('.checkout-btn').on('click', handleCheckout);
     
     // Save for later
-    $(document).on('click', '.save-for-later', handleSaveForLater);
+    // $(document).on('click', '.save-for-later', handleSaveForLater); แก้ตรงนี้ [ลบออก]
     
     // Continue shopping
-    $('.continue-shopping').on('click', handleContinueShopping);
+    // $('.continue-shopping').on('click', handleContinueShopping); แก้ตรงนี้ [ลบออก]
 }
 
 /**
@@ -135,7 +155,7 @@ function handleQuantityChange() {
     $(this).val(newQuantity);
     
     updateCartItemQuantity(cartKey, newQuantity);
-
+}
 /**
  * Handle clear cart
  */
@@ -214,11 +234,4 @@ function handleCheckout() {
 /**
  * Show toast message
  */
-function showToast(message, isError) {
-    const toast = $('#toast');
-    toast.find('.toast-body').text(message);
-    toast.removeClass('bg-danger bg-success');
-    toast.addClass(isError ? 'bg-danger' : 'bg-success');
-    toast.toast({ delay: 2500 });
-    toast.toast('show');
-}
+
