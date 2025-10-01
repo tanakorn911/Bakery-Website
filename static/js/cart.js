@@ -135,24 +135,6 @@ function handleQuantityChange() {
     $(this).val(newQuantity);
     
     updateCartItemQuantity(cartKey, newQuantity);
-}
-
-/**
- * Handle remove item
- */
-function handleRemoveItem(e) {
-    e.preventDefault();
-    
-    if (cartData.isUpdating) return;
-    
-    const cartKey = $(this).data('cart-key');
-    const productName = $(this).data('product-name') || 'สินค้านี้';
-    
-    // Show confirmation
-    if (confirm(`คุณต้องการลบ "${productName}" ออกจากตะกร้าหรือไม่?`)) {
-        removeCartItem(cartKey);
-    }
-}
 
 /**
  * Handle clear cart

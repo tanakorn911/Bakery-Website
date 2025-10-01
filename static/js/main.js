@@ -442,28 +442,6 @@ function updateCartQuantity(cartKey, quantity) {
             showToast('เกิดข้อผิดพลาด', 'error');
         }
     });
-}
-
-/**
- * Handle remove item from cart
- */
-function handleRemoveFromCart(e) {
-    e.preventDefault();
-    
-    if (isLoading) return;
-    
-    const button = $(this);
-    const cartKey = button.data('cart-key');
-    const productName = button.data('product-name') || 'สินค้า';
-    
-    // Confirm removal
-    if (!confirm(`ต้องการลบ ${productName} ออกจากตะกร้าหรือไม่?`)) {
-        return;
-    }
-    
-    const data = {
-        cart_key: cartKey
-    };
     
     $.ajax({
         url: '/remove_from_cart',
