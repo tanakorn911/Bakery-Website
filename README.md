@@ -48,7 +48,7 @@ python app.py
 
 ### แอดมิน
 - **Username**: `admin`
-- **Password**: `admin`
+- **Password**: `admin123`
 - **หน้าที่**: จัดการสินค้า, ดูสถิติ
 
 ### ลูกค้า
