@@ -16,7 +16,6 @@ app.secret_key = "sweetdreams_bakery_secret_2024"
 app.permanent_session_lifetime = timedelta(days=7)
 DB_NAME = "bakery.db"
 
-
 @app.template_filter('to_bangkok')
 def to_bangkok_filter(value, fmt='%d/%m/%Y %H:%M'):
     if not value:
