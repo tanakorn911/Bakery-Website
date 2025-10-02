@@ -125,15 +125,15 @@ def init_db():
     )
     """)
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS order_status_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id)
-    )
-    """)
+    # cursor.execute("""
+    # CREATE TABLE IF NOT EXISTS order_status_logs (
+    # id INTEGER PRIMARY KEY AUTOINCREMENT,
+    # order_id INTEGER NOT NULL,
+    # status TEXT NOT NULL,
+    # changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    # FOREIGN KEY (order_id) REFERENCES orders(id)
+    # )
+    # """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS addresses (
