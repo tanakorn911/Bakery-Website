@@ -29,15 +29,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 5. เตรียมโฟลเดอร์รูปภาพ
-```bash
-# สร้างโฟลเดอร์สำหรับรูปสินค้า
-mkdir -p static/images/products
-
 # เพิ่มรูปโลโก้และรูปสินค้า (ถ้ามี)
 ```
 
-### 6. รันแอปพลิเคชัน
+### 5. รันแอปพลิเคชัน
 ```bash
 python app.py
 ```
