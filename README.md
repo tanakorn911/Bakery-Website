@@ -29,9 +29,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# เพิ่มรูปโลโก้และรูปสินค้า (ถ้ามี)
-```
-
 ### 5. รันแอปพลิเคชัน
 ```bash
 python app.py
